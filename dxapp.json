@@ -1,0 +1,112 @@
+{
+    "name": "eggd_generate_rd_wgs_workbook",
+    "title": "eggd_generate_rd_wgs_workbook",
+    "summary": "Creates an .xlsx workbook given a GEL WGS RD JSON",
+    "dxapi": "1.0.0",
+    "version": "1.0.0",
+    "inputSpec": [
+      {
+        "name": "json",
+        "label": "GEL JSON for WGS rare disease",
+        "class": "file",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "output",
+        "label": "output name prefix for file, if not set will use json input",
+        "class": "string",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "out_dir",
+        "label": "path to output directory",
+        "class": "string",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "acmg",
+        "label": "add extra ACMG reporting template sheet(s)",
+        "class": "int",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "cnv",
+        "label": "add CNV reporting template sheet(s)",
+        "class": "int",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "mane",
+        "label": "MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs",
+        "class": "file",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "obo_path",
+        "label": "path to obo files",
+        "class": "string",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "obo_files",
+        "label": "obo files",
+        "class": "array:file",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "refseq_tsv",
+        "label": "Refseq tsv which has Ensembl IDs including protein ID for each gene ID",
+        "class": "file",
+        "optional": true,
+        "help": ""
+      } 
+    ],
+    "outputSpec": [
+      {
+        "name": "xlsx_report",
+        "label": "Variant workbook for the given case",
+        "class": "file",
+        "optional": true,
+        "help": ""
+      }
+    ],
+    "runSpec": {
+      "timeoutPolicy": {
+        "*": {
+          "hours": 1
+        }
+      },
+      "interpreter": "bash",
+      "file": "src/code.sh",
+      "distribution": "Ubuntu",
+      "release": "20.04",
+      "version": "0"
+    },
+    "developers":[
+      "org-emee_1"
+    ],
+    "authorizedUsers": [
+      "org-emee_1"
+    ],
+    "access": {
+      "project": "CONTRIBUTE",
+      "allProjects": "VIEW"
+    },
+    "regionalOptions": {
+      "aws:eu-central-1": {
+        "systemRequirements": {
+          "*": {
+            "instanceType": "mem1_ssd1_v2_x2"
+          }
+        }
+      }
+    }
+  }

@@ -1,0 +1,7 @@
+colour==0.1.5
+dxpy==0.318.1
+obonet==1.0.0
+openpyxl==3.1.2
+pandas==1.4.1
+pytest==7.0.1
+networkx==3.3
