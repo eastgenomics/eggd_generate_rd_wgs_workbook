@@ -6,21 +6,16 @@ import openpyxl.drawing
 import openpyxl.drawing.image
 import pandas as pd
 import openpyxl
-from openpyxl.styles import Alignment, Border, DEFAULT_FONT, Font, Side
-from openpyxl.styles.fills import PatternFill
-from openpyxl import load_workbook
-from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.styles import Alignment, DEFAULT_FONT, Font
 import os
 from pathlib import Path
 import re
 
-# openpyxl style settings
-THIN = Side(border_style="thin", color="000000")
-MEDIUM = Side(border_style="medium", color="000001")
-THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+from excel_styles import ExcelStyles, DropDown
+from dx_file_manage import DXFile
+from get_variant_info import VariantInfo, VariantNomenclature
 
 DEFAULT_FONT.name = 'Calibri'
-
 # row and col counts that are to be unlocked next to
 # populated table in all sheets if it is dias pipeline
 # required for 'lock_sheet' function
@@ -36,7 +31,6 @@ class excel():
         self.wgs_data = None
         self.writer = None
         self.workbook = None
-        self.summary = None
         self.proband = None
         self.mother = None
         self.father = None
@@ -48,31 +42,31 @@ class excel():
         self.ex_index = None
         self.var_df = None
         self.column_list = [
-                "Gene",
-                "Chr",
-                "Pos",
-                "End",
-                "Length",
-                "Ref",
-                "Alt",
-                'STR1',
-                'STR2',
-                "Repeat",
-                "Copy Number",
-                "Type",
-                "HGVSc",
-                "HGVSp",
-                "Priority",
-                "Inheritance",
-                "Segregation pattern",
-                "Inheritance mode",
-                "Zygosity",
-                "Depth",
-                "AF Max",
-                "Penetrance filter",
-                "Comment",
-                "Checker comment"
-            ]
+            "Gene",
+            "Chr",
+            "Pos",
+            "End",
+            "Length",
+            "Ref",
+            "Alt",
+            'STR1',
+            'STR2',
+            "Repeat",
+            "Copy Number",
+            "Type",
+            "HGVSc",
+            "HGVSp",
+            "Priority",
+            "Inheritance",
+            "Segregation pattern",
+            "Inheritance mode",
+            "Zygosity",
+            "Depth",
+            "AF Max",
+            "Penetrance filter",
+            "Comment",
+            "Checker comment"
+        ]
 
     def generate(self) -> None:
         """
@@ -92,7 +86,7 @@ class excel():
         self.writer.close()
         if self.args.acmg:
             for i in range(1, self.args.acmg+1):
-                self.write_reporting_template(i)
+                self.write_snv_reporting_template(i)
         if self.args.cnv:
             for i in range(1, self.args.cnv+1):
                 self.write_cnv_reporting_template(i)
@@ -100,12 +94,41 @@ class excel():
         # self.workbook.save(self.args.output)
         # if self.args.acmg and self.args.lock_sheet:
         #     self.protect_rename_sheets()
-        # if self.args.acmg:
-        #     self.drop_down()
+        
         self.workbook.save(self.args.output)
-        self.drop_down()
+        if self.args.acmg:
+            DropDown.drop_down(self)
 
         print('Done!')
+
+    def open_files(self):
+        '''
+        Open input files and read into variables.
+        '''
+        if 'dnanexus' in self.args.json:
+            json_dict = json.loads(self.args.json)
+            self.wgs_data = DXFile.read_dx_file(self, json_dict)
+            self.wgs_data = json.loads(self.wgs_data[0])
+            # set output prefix to family id, otherwise the file is named the
+            # dx file id for the JSON (not ideal)
+            self.args.output = self.wgs_data["family_id"] + ".xlsx"
+        else:
+            with open(self.args.json) as f:
+                self.wgs_data = json.load(f)
+
+        if 'dnanexus' in self.args.mane:
+            mane_dict = json.loads(self.args.mane)
+            self.mane = DXFile.read_dx_file(self, mane_dict)
+        else:
+            with open(self.args.mane) as f:
+                self.mane = f.readlines()
+
+        if 'dnanexus' in self.args.refseq_tsv:
+            refseq_tsv_dict = json.loads(self.args.refseq_tsv)
+            self.refseq_tsv = DXFile.read_dx_file(self, refseq_tsv_dict)
+        else:
+            with open(self.args.refseq_tsv) as refseq_tsv:
+                self.refseq_tsv = refseq_tsv.readlines()
 
     def summary_page(self):
         '''
@@ -190,9 +213,9 @@ class excel():
             ]
         }
 
-        self.borders(row_ranges, summary_sheet)
+        ExcelStyles.borders(self, row_ranges, summary_sheet)
 
-    def hpo_version(self, version):
+    def get_hpo_obo(self):
         '''
         Select which version of HPO to use based on which version was used by
         GEL when the JSON was made.
@@ -204,6 +227,10 @@ class excel():
             obo (str): Path to HPO obo file for the version of HPO used in the
             JSON
         '''
+        version = self.wgs_data['referral']['referral_data']["pedigree"][
+            "members"
+            ][0]["hpoTermList"][0]['hpoBuildNumber']
+
         if self.args.obo_files:
             if version == "v2019_02_12":
                 obo="/home/dnanexus/obo_files/hpo_v20190212.obo"
@@ -236,7 +263,7 @@ class excel():
 
         return obo
 
-    def get_hpo_terms(self, member):
+    def get_hpo_terms(self, member, obo):
         '''
         Use obo hpo term ontology (.obo) file to convert HPO IDs to names
         Inputs:
@@ -245,12 +272,10 @@ class excel():
             hpo_names (list): list of HPO names corresponding to HPO terms for
             that family member
         '''
+
         hpo_terms = []
         hpo_names = []
         if member["hpoTermList"]:
-            # get HPO version from JSON and select that obo file
-            obo = self.hpo_version(member["hpoTermList"][0]['hpoBuildNumber'])
-
             graph = obonet.read_obo(obo)
             # Read in HPO IDs from JSON
             for i in member["hpoTermList"]:
@@ -276,10 +301,13 @@ class excel():
         It will also do this for any relatives in the JSON
         '''
         num_participants = 0
+        # Get version of HPO to use for terms
+        obo = self.get_hpo_obo()
+
         for member in self.wgs_data['referral']['referral_data']["pedigree"]["members"]:
             if member["isProband"] == True:
                 num_participants += 1
-                terms_list = self.get_hpo_terms(member)
+                terms_list = self.get_hpo_terms(member, obo)
                 self.summary_content[(6, 5)] = terms_list
                 self.summary_content[(6, 4)] = member["affectionStatus"]
                 self.summary_content[(6, 2)] = member["participantId"]
@@ -288,7 +316,7 @@ class excel():
 
             elif member["additionalInformation"]["relation_to_proband"] == "Mother":
                 num_participants += 1
-                terms_list = self.get_hpo_terms(member)
+                terms_list = self.get_hpo_terms(member, obo)
                 self.summary_content[(7, 5)] = terms_list
                 self.summary_content[(7, 4)] = member["affectionStatus"]
                 self.summary_content[(7, 2)] = member["participantId"]
@@ -296,7 +324,7 @@ class excel():
 
             elif member["additionalInformation"]["relation_to_proband"] == "Father":
                 num_participants += 1
-                terms_list = self.get_hpo_terms(member)
+                terms_list = self.get_hpo_terms(member, obo)
                 self.summary_content[(8, 5)] = terms_list
                 self.summary_content[(8, 4)] = member["affectionStatus"]
                 self.summary_content[(8, 2)] = member["participantId"]
@@ -306,7 +334,7 @@ class excel():
                 self.summary_content[(9, 1)] = member["additionalInformation"][
                     "relation_to_proband"
                     ]
-                terms_list = self.get_hpo_terms(member)
+                terms_list = self.get_hpo_terms(member, obo)
                 self.summary_content[(9, 5)] = terms_list
                 self.summary_content[(9, 4)] = member["affectionStatus"]
                 self.summary_content[(9, 2)] = member["participantId"]
@@ -376,113 +404,6 @@ class excel():
             "Reporting"
         )
 
-    def read_dx_file(self, file):
-        '''
-        read a dx file
-        '''
-        print(f"Reading from {file}")
-
-        if isinstance(file, dict):
-            # provided as {'$dnanexus_link': '[project-xxx:]file-xxx'}
-            file = file.get('$dnanexus_link')
-
-        if re.match(r'^file-[\d\w]+$', file):
-            # just file-xxx provided => find a project context to use
-            file_details = self.get_file_project_context(file)
-            project = file_details.get('project')
-            file_id = file_details.get('id')
-        elif re.match(r'^project-[\d\w]+:file-[\d\w]+', file):
-            # nicely provided as project-xxx:file-xxx
-            project, file_id = file.split(':')
-        else:
-            # who knows what's happened, not for me to deal with
-            raise RuntimeError(
-                f"DXFile not in an expected format: {file}"
-            )
-        
-        return dxpy.DXFile(
-            project=project, dxid=file_id).read().rstrip('\n').split('\n')
-
-    def get_file_project_context(self, file) -> dxpy.DXObject:
-        """
-        Get project ID for a given file ID, used where only file ID is
-        provided as DXFile().read() requires both, will ensure that
-        only a live version of a project context is returned.
-
-        Parameters
-        ----------
-        file : str
-            file ID of file to search
-
-        Returns
-        -------
-        DXObject
-            DXObject file handler object
-
-        Raises
-        ------
-        AssertionError
-            Raised if no live copies of the given file could be found
-        """
-        print(f"Searching all projects for: {file}")
-
-        # find projects where file exists and get DXFile objects for
-        # each to check archivalState, list_projects() returns dict
-        # where key is the project ID and value is permission level
-        projects = dxpy.DXFile(dxid=file).list_projects()
-        print(f"Found file in {len(projects)} project(s)")
-
-        files = [
-            dxpy.DXFile(dxid=file, project=id).describe()
-            for id in projects.keys()
-        ]
-
-        # filter out any archived files or those resolving
-        # to the current job container context
-        files = [
-            x for x in files
-            if x['archivalState'] == 'live'
-            and not re.match(r"^container-[\d\w]+$", x['project'])
-        ]
-        assert files, f"No live files could be found for the ID: {file}"
-
-        print(
-            f"Found {file} in {len(files)} projects, "
-            f"using {files[0]['project']} as project context"
-        )
-
-        return files[0]
-
-    def open_files(self):
-        '''
-        Open input files and read into variables.
-        '''
-
-        if 'dnanexus' in self.args.json:
-            json_dict = json.loads(self.args.json)
-            self.wgs_data = self.read_dx_file(json_dict)
-            self.wgs_data = json.loads(self.wgs_data[0])
-            # set output prefix to family id, otherwise the file is named the
-            # dx file id for the JSON (not ideal)
-            self.args.output = self.wgs_data["family_id"] + ".xlsx"
-        else:
-            with open(self.args.json) as f:
-                self.wgs_data = json.load(f)
-
-        if 'dnanexus' in self.args.mane:
-            mane_dict = json.loads(self.args.mane)
-            self.mane = self.read_dx_file(mane_dict)
-        else:
-            with open(self.args.mane) as f:
-                self.mane = f.readlines()
-
-        if 'dnanexus' in self.args.refseq_tsv:
-            refseq_tsv_dict = json.loads(self.args.refseq_tsv)
-            self.refseq_tsv = self.read_dx_file(refseq_tsv_dict)
-        else:
-            with open(self.args.refseq_tsv) as refseq_tsv:
-                self.refseq_tsv = refseq_tsv.readlines()
-
     def create_gel_tiering_variant_page(self):
         '''
         Take variants from GEL tiering JSON and format into sheet in Excel workbook.
@@ -497,10 +418,14 @@ class excel():
             for event in variant["reportEvents"]:                
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = variant["reportEvents"].index(event)
-                    var_dict = self.get_snv_info(
-                        variant, proband_index, event_index
+                    var_dict = VariantInfo.get_snv_info(
+                        variant, proband_index, event_index, self.column_list
                         )
-                    c_dot, p_dot = self.get_hgvs_gel(variant)
+                    c_dot, p_dot = VariantNomenclature.get_hgvs_gel(
+                        variant,
+                        self.mane,
+                        self.refseq_tsv
+                        )
                     var_dict["HGVSc"] = c_dot
                     var_dict["HGVSp"] = p_dot
                     variant_list.append(var_dict)
@@ -516,9 +441,9 @@ class excel():
                 )
 
             for event in str_variant["reportEvents"]:                
-                if event["tier"] in ["TIER1", "TIER2"]:
-                    var_dict = self.get_str_info(
-                        str_variant, proband_index 
+                if event["tier"] == "TIER1":
+                    var_dict = VariantInfo.get_str_info(
+                        str_variant, proband_index, self.column_list
                     )
                     variant_list.append(var_dict)
         
@@ -533,7 +458,9 @@ class excel():
                 if sv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA"
                     ]:
-                    var_dict = self.get_cnv_info(sv, event_index)
+                    var_dict = VariantInfo.get_cnv_info(
+                        sv, event_index, self.column_list
+                    )
                     variant_list.append(var_dict)
 
         self.var_df = pd.DataFrame(variant_list)
@@ -553,7 +480,7 @@ class excel():
             )
 
         # Set column widths
-        self.resize_variant_columns(self.workbook["Variants"])
+        ExcelStyles.resize_variant_columns(self, self.workbook["Variants"])
 
         # Add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
@@ -595,383 +522,6 @@ class excel():
                     "'genomics_england_tiering' or 'Exomiser'"
                 )
 
-    def add_columns_to_dict(self):
-        '''
-        Function to add columns to variant pages.
-        All columns are empty strings, so they can be overwritten by values if
-        needed, but left blank if not.
-        '''
-        variant_dict = {}
-        for col in self.column_list:
-            variant_dict[col] = ""
-
-        return variant_dict
-
-    def convert_ensembl_to_refseq(self, ensembl):
-        '''
-        Search MANE file for query ensembl transcript ID. If match found,
-        output the equivalent refseq ID, else output None
-        Inputs:
-            ensembl (str): Ensembl transcript ID from JSON
-        Outputs:
-            refseq (str): Matched MANE refseq ID to Ensembl transcript ID, or
-            None if no match found.
-        '''
-        refseq = None
-
-        for line in self.mane:
-            if ensembl in line:
-                refseq = line.split(',')[3].strip("\"")
-                break
-        return refseq
-
-    def get_af_max(self, variant):
-        '''
-        Get AF for population with highest allele frequency in the JSON
-        Inputs:
-            variant (dict): dict describe a single variant from JSON
-        Outputs:
-            highest_af (int): frequency of the variant in the population with
-            the highest allele frequency of the variant, or 0 if the variant
-            is not seen in any populations in the JSON
-        '''
-        # TODO change so this includes all populations!
-        if variant['variantAttributes']['alleleFrequencies'] is not None:
-            filtered_AFs = []
-            for allele_freq in variant['variantAttributes']['alleleFrequencies']:
-                if allele_freq['study'] in [
-                    'GNOMAD_EXOMES',
-                    "GNOMAD_GENOMES"
-                    ] and allele_freq['population'] not in [
-                        "OTH",
-                        "ASJ",
-                        "FIN",
-                        "MALE",
-                        "FEMALE"
-                    ]:
-                    # filter out Ashkenazi Jewish, Finnish and Other populations
-                    # these are filtered out by gnomad and congenica when working
-                    # out AF max for popmax/grpmax
-                    # Also filter out Male/Female populations
-                    filtered_AFs.append(allele_freq)
-                if allele_freq['study'] in [
-                    "GEL_aggCOVID_V4.2-20220117",
-                    "CNV_AF",
-                    "CNV_AUC"
-                    ]:
-                    filtered_AFs.append(allele_freq)
-            
-            highest_af = 0
-            for af in filtered_AFs:
-                if af['alternateFrequency'] > highest_af:
-                    highest_af = af['alternateFrequency']
-        else:
-            highest_af = 0
-        return int(highest_af)
-
-    def get_gene_symbol(self, variant):
-        '''
-        Get gene symbol from variant record
-        '''
-        gene_list = []
-        for entry in variant['reportEvents'][0]['genomicEntities']:
-            if entry['type'] == 'gene':
-                gene_list.append(entry['geneSymbol'])
-        uniq_genes = list(set(gene_list))
-        if len(uniq_genes) == 1:
-            gene_symbol = uniq_genes[0]
-        else:
-            gene_symbol = str(uniq_genes).strip('[').strip(']')
-        return gene_symbol
-
-    def get_ensp(self, enst):
-        '''
-        from input ensembl transcript ID, get ensembl protein ID from the
-        refseq_tsv
-        Inputs:
-            enst (str): Ensembl transcript ID from JSON
-        Outputs:
-            ensp (str): Ensembl protein ID equivalent to the input transcript
-            ID
-        '''
-        ensp = None
-        for line in self.refseq_tsv:
-            if enst in line:
-                ensp = [x for x in line.split() if x.startswith('ENSP')]
-                ensp = ensp[0]
-                break
-        
-        return ensp
-
-    def get_hgvs_exomiser(self, variant):
-        '''
-        Exomiser variants have HGVS nomenclature for p dot and c dot provided
-        in one field in the JSON in the following format:
-        gene_symbol:ensembl_transcript_id:c_dot:p_dot
-        This function extracts the cdot (with MANE refseq equivalent to 
-        ensembl transcript ID if found) and pdot (with ensembl protein ID)
-        Inputs:
-            variant: (dict) dict describing single variant from JSON
-        Outputs:
-            hgvs_c: (str) HGVS c dot (transcript) nomenclature for the variant.
-            annotated against refseq transcript ID if one exists, and ensembl
-            transcript ID if there is no matched equivalent
-            hgvs_p: (str) HGVS p dot (protein) nomenclature for the variant.
-            this is annotated against the ensembl protein ID.
-        '''
-        hgvs_c = None
-        hgvs_p = None
-        hgvs_source = variant['variantAttributes'][
-            'additionalTextualVariantAnnotations'
-            ]['hgvs']
-        refseq = self.convert_ensembl_to_refseq(hgvs_source.split(':')[1])
-        if refseq is not None:
-            hgvs_c = refseq + ":" + hgvs_source.split(':')[2]
-        ensp = self.get_ensp(hgvs_source.split(':')[1].split('.')[0])
-        if ensp is not None:
-            hgvs_p = ensp + ':' + hgvs_source.split(':')[3]
-        return hgvs_c, hgvs_p
-
-    def get_hgvs_gel(self, variant):
-        '''
-        GEL variants store HGVS p dot and c dot nomenclature separately.
-        This function extracts the cdot (with MANE refseq equivalent to 
-        ensembl transcript ID if found) and pdot (with ensembl protein ID)
-        Inputs:
-            variant: (dict) dict describing single variant from JSON
-        Outputs:
-            hgvs_c: (str) HGVS c dot (transcript) nomenclature for the variant.
-            annotated against refseq transcript ID if one exists, and ensembl
-            transcript ID if there is no matched equivalent
-            hgvs_p: (str) HGVS p dot (protein) nomenclature for the variant.
-            this is annotated against the ensembl protein ID.
-        '''
-        hgvs_p = None
-        hgvs_c = None
-        ref_list = []
-        enst_list = []
-        cdnas = variant['variantAttributes']['cdnaChanges']
-        protein_changes = variant['variantAttributes']['proteinChanges']
-
-        for cdna in cdnas:
-            refseq = self.convert_ensembl_to_refseq(cdna.split('(')[0])
-            
-            if refseq is not None:
-                ref_list.append(refseq + cdna.split(')')[1])
-                enst_list.append(cdna.split('(')[0])
-
-        if len(set(ref_list)) > 1:
-            raise RuntimeError(
-                f"Transcript {cdnas} matched more than one MANE transcript"
-            )
-        elif len(set(ref_list)) == 0:
-            # if there is no MANE equivalent refseq, use the ensembl
-            # transcript ID, remove gene ID in brackets.
-            # currently we just use the first one in the list! is there a
-            # better way to do this?
-            hgvs_c = re.sub("\(.*?\)", "", cdnas[0])
-            ensp = self.get_ensp(cdnas[0].split('(')[0])
-            for protein in protein_changes:
-                if ensp in protein:
-                    hgvs_p = protein
-            
-        else:
-            hgvs_c = list(set(ref_list))[0]
-            ensp = self.get_ensp(enst_list[0])
-            for protein in protein_changes:
-                if ensp in protein:
-                    hgvs_p = protein                
-
-        return hgvs_c, hgvs_p
-
-    def convert_tier(self, tier, var_type):
-        '''
-        Convert tier to add SNV as CNVs are also Tier 1
-        Inputs:
-            tier (str): described GEL tiering tier for a variant in the JSON
-            var_type (str): variant type
-        Outputs:
-            tier (str): tier for that variant converted to include variant type
-            to facilitate counting a total number of variants for each tier and
-            type
-        '''
-        if tier == "TIER1" and var_type == "SNV":
-            tier = "TIER1_SNV"
-        elif tier == "TIER1" and var_type == "CNV":
-            tier = "TIER1_CNV"
-        elif tier == "TIER2" and var_type == "SNV":
-            tier = "TIER2_SNV"
-        elif tier == "TIERA" and var_type == "CNV":
-            tier = "TIER1_CNV"
-        elif tier == "TIER1" and var_type == "STR":
-            tier = "TIER1_STR"
-        elif tier == "TIER2" and var_type == "STR":
-            tier = "TIER2_STR"
-            # TODO fix this; there are no TIER2 STRs!
-            # TODO write in readme how var filtering works!
-        return tier
-
-    def get_inheritance(self, variant, proband_index):
-        '''
-        Work out inheritance of variant based on zygosity of parents
-        Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            proband_index: (int) position within list of variant calls that
-            belongs to the proband
-        Outputs:
-            inheritance (str): inferred inheritance of the variant, or None.
-        '''
-        # TODO entirely reconfigure this based on what GEL said!
-        inheritance = None
-        mother_index = None
-        father_index = None
-        inheritance_types = ['alternate_homozygous', 'heterozygous']
-        calls = variant['variantCalls']
-
-        if self.mother and self.father:
-            # find index of variant call list for mother and father            
-            for call in variant['variantCalls']:
-                print(call)
-                if call['participantId'] == self.mother:
-                    mother_index = variant['variantCalls'].index(call)
-                elif call['participantId'] == self.father:
-                    father_index = variant['variantCalls'].index(call)
-            if mother_index and father_index:
-                if calls[proband_index]['zygosity'] in inheritance_types:
-
-                    if (calls[
-                            mother_index
-                            ]['zygosity'] == 'reference_homozygous'
-                        and calls[
-                            father_index
-                            ]['zygosity'] in inheritance_types
-                        ):
-                        inheritance = "paternal"
-
-                    elif (calls[
-                            mother_index
-                            ]['zygosity'] in inheritance_types
-                        and calls[
-                            father_index
-                            ]['zygosity'] == 'reference_homozygous'
-                        ):
-                        inheritance = "maternal"
-            else:
-                confusing_call = calls[proband_index]['zygosity']
-                print(
-                    f"proband call {confusing_call} not recognised"
-                )
-
-        # can we reliable say this? it could have been inherited from the father
-        # we just don't have his data?
-        elif self.mother and not self.father:
-            for call in variant['variantCalls']:
-                if call['participantId'] == self.mother:
-                    mother_index = variant['variantCalls'].index(call)
-            if calls[mother_index]['zygosity'] in inheritance_types:
-                inheritance = "maternal"
-        # same as above?
-        elif self.father and not self.mother:
-            for call in variant['variantCalls']:
-                if call['participantId'] == self.father:
-                    father_index = variant['variantCalls'].index(call)
-
-            if calls[father_index]['zygosity'] in inheritance_types:
-                inheritance = "paternal"
-
-        return inheritance
-
-    def get_str_info(self, variant, proband_index):
-        '''
-        Fill in variant dict for specific STR variant
-        Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            proband_index: (int) position within list of variant calls that
-            belongs to the proband
-        Outputs:
-            var_dict: (dict) dict of variant information extracted from JSON
-            will be added to a list of dicts for conversion into dataframe.
-        '''
-        var_dict = self.add_columns_to_dict()
-        var_dict["Chr"] = variant["coordinates"]["chromosome"]
-        var_dict["Pos"] = variant["coordinates"]["start"]
-        var_dict["End"] = variant["coordinates"]["end"]
-        var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
-        var_dict["Type"] = "STR"
-        var_dict["Priority"] = "STR"
-        var_dict["Repeat"] = variant[
-            "shortTandemRepeatReferenceData"
-        ]["repeatedSequence"]
-        var_dict["STR1"] = variant['variantCalls'][proband_index][
-            'numberOfCopies'
-        ][0]['numberOfCopies']
-        var_dict["STR2"] = variant['variantCalls'][proband_index][
-            'numberOfCopies'
-        ][1]['numberOfCopies']
-        var_dict["Gene"] = self.get_gene_symbol(variant)
-        return var_dict
-
-    def get_snv_info(self, variant, pb_index, ev_index):
-        '''
-        Fill in variant dict for specific SNV
-        Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            pb_index (int): index of variantCalls list for the proband
-            ev_index (int): index of reportEvents list for the event
-        Outputs:
-            var_dict: (dict) dict of variant information extracted from JSON
-            will be added to a list of dicts for conversion into dataframe.
-        '''
-        var_dict = self.add_columns_to_dict()
-        var_dict["Chr"] = variant["variantCoordinates"]["chromosome"]
-        var_dict["Pos"] = variant["variantCoordinates"]["position"]
-        var_dict["Ref"] = variant["variantCoordinates"]["reference"]
-        var_dict["Alt"] = variant["variantCoordinates"]["alternate"]
-        var_dict["Type"] = "SNV"
-        var_dict["Priority"] = self.convert_tier(
-            variant["reportEvents"][ev_index]["tier"], "SNV"
-        )
-        var_dict["Zygosity"] = variant["variantCalls"][pb_index]["zygosity"]
-        var_dict["Depth"] = variant["variantCalls"][pb_index]['depthAlternate']
-        var_dict["Gene"] = self.get_gene_symbol(variant)
-        var_dict['AF Max'] = self.get_af_max(variant)
-        var_dict["Penetrance filter"] = variant["reportEvents"][ev_index]["penetrance"]
-        var_dict["Inheritance mode"] = variant["reportEvents"][ev_index][
-            "modeOfInheritance"
-        ]
-        var_dict["Segregation pattern"] = variant["reportEvents"][ev_index][
-            "segregationPattern"
-        ]
-        var_dict["Inheritance"] = self.get_inheritance(variant, pb_index)
-        return var_dict
-
-    def get_cnv_info(self, variant, ev_index):
-        '''
-        Extract CNV info from JSON and create variant dict of required data for
-        workbook
-        Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            ev_index (int): index of reportEvents list for the event
-        Outputs:
-            var_dict: (dict) dict of variant information extracted from JSON
-            will be added to a list of dicts for conversion into dataframe.
-        '''
-        var_dict = self.add_columns_to_dict()
-        var_dict["Chr"] = variant["coordinates"]["chromosome"]
-        var_dict["Pos"] = variant["coordinates"]["start"]
-        var_dict["End"] = variant["coordinates"]["end"]
-        var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
-        var_dict["Type"] = "CNV"
-        var_dict["Priority"] = self.convert_tier(
-            variant["reportEvents"][ev_index]["tier"], "CNV"
-        )
-        var_dict["Copy Number"] = variant["variantCalls"][
-            0
-            ]['numberOfCopies'][0]['numberOfCopies']
-        var_dict["Gene"] = self.get_gene_symbol(variant)
-        var_dict['AF Max'] = self.get_af_max(variant)
-        return var_dict
-
     def check_if_proband(self, var_calls):
         '''
         Take list of variantCalls for a variant and return index of the
@@ -994,28 +544,6 @@ class excel():
             )
 
         return index
-
-    def resize_variant_columns(self, sheet):
-        '''
-        Resize columns for both gel tiering variant page + exomiser page to the
-        same width
-        Inputs:
-            sheet: openpxyl sheet on which to resize the columns
-        '''
-        for col in ['C', 'D']:
-            sheet.column_dimensions[col].width = 14
-        sheet.column_dimensions['M'].width = 14
-        for col in ['J', 'S']:
-            sheet.column_dimensions[col].width = 10
-        for col in ['H', 'I', 'L']: 
-            sheet.column_dimensions[col].width = 6
-        for col in ['O', 'P', 'V']:
-            sheet.column_dimensions[col].width = 12
-        sheet.column_dimensions['B'].width = 5
-        for col in ['M', 'N']:
-            sheet.column_dimensions[col].width = 20
-        for col in ['W', 'X']:
-            sheet.column_dimensions[col].width = 25
 
     def create_additional_analysis_page(self):
         '''
@@ -1080,13 +608,22 @@ class excel():
             event_index = 0
             i = self.check_if_proband(snv["variantCalls"])
             rank = snv['reportEvents'][0]['vendorSpecificScores']['rank']
-            var_dict = self.get_snv_info(snv, i, event_index)
+            var_dict = VariantInfo.get_snv_info(
+                snv, i, event_index, self.column_list
+            )
             var_dict["Priority"] = f"Exomiser Rank {rank}"
-            var_dict["HGVSc"], var_dict["HGVSp"] = self.get_hgvs_exomiser(snv)
+            var_dict["HGVSc"], var_dict["HGVSp"] = (
+                VariantNomenclature.get_hgvs_exomiser(
+                    snv,
+                    self.mane,
+                    self.refseq_tsv)
+                )
             variant_list.append(var_dict)
 
         # Look through GEL variants and return those with high de novo quality
         # score
+        # TODO could these have already been reported in the gel tiering sheet?
+        # if so need to avoid duplicating!
         # For SNVs
         for snv in self.wgs_data["interpretedGenomes"][
                 self.gel_index
@@ -1096,12 +633,17 @@ class excel():
                     # Threshold for SNVs is 0.0013
                     if event['deNovoQualityScore'] > 0.0013:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = self.get_snv_info(snv, i, event_index)
+                        var_dict = VariantInfo.get_snv_info(
+                            snv, i, event_index, self.column_list
+                        )
                         var_dict["Priority"] = "De novo"
                         var_dict["Inheritance"] = "De novo"
-                        c_dot, p_dot = self.get_hgvs_gel(snv)
-                        var_dict["HGVSc"] = c_dot
-                        var_dict["HGVSp"] = p_dot
+                        var_dict["HGVSc"], var_dict["HGVSp"] = (
+                            VariantNomenclature.get_hgvs_gel(
+                                snv,
+                                self.mane,
+                                self.refseq_tsv)
+                        )
                         variant_list.append(var_dict)
 
         # For CNVs
@@ -1114,7 +656,7 @@ class excel():
                 if event['deNovoQualityScore'] is not None:
                     if event['deNovoQualityScore'] > 0.02:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = self.get_cnv_info(sv, event_index)
+                        var_dict = VariantInfo.get_cnv_info(sv, event_index)
                         var_dict["Priority"] = "De novo"
                         var_dict["Inheritance"] = "De novo"
                         variant_list.append(var_dict)
@@ -1158,7 +700,9 @@ class excel():
             index=False
         )
 
-        self.resize_variant_columns(self.workbook["Extended_analysis"])
+        ExcelStyles.resize_variant_columns(
+            self, self.workbook["Extended_analysis"]
+        )
 
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
@@ -1277,7 +821,7 @@ class excel():
             ]
         }
 
-        self.borders(row_ranges, cnv)
+        ExcelStyles.borders(self, row_ranges, cnv)
 
         # add some colour
         colour_cells = {
@@ -1287,7 +831,7 @@ class excel():
             '00B050': ['G11'],
             'D9D9D9': ['G7']
         }
-        self.colours(colour_cells, cnv)
+        ExcelStyles.colours(self, colour_cells, cnv)
 
         # align text
         for row in [7, 11, 13, 15, 17, 18]:
@@ -1295,7 +839,7 @@ class excel():
                 wrapText=True, vertical="center", horizontal="center"
             )
 
-    def write_reporting_template(self, report_sheet_num) -> None:
+    def write_snv_reporting_template(self, report_sheet_num) -> None:
         """
         Writes sheet(s) to Excel file with formatting for reporting against
         ACMG criteria
@@ -1462,7 +1006,7 @@ class excel():
 
         }
 
-        self.colours(colour_cells, report)
+        ExcelStyles.colours(self, colour_cells, report)
 
         # add some borders
         row_ranges = {
@@ -1485,45 +1029,9 @@ class excel():
                 'E2:E3'
             ]
         }
-        self.borders(row_ranges, report)
+        ExcelStyles.borders(self, row_ranges, report)
 
-    def colours(self, colour_cells, sheet):
-        '''
-        Add colour to cells in workbook.
-        Inputs:
-            colour_cells (dict): dict of colour number keys with cells that
-            should be that colour as values
-            sheet (str): sheet in workbook to add colour to
-        '''
-        for colour, cells in colour_cells.items():
-            for cell in cells:
-                sheet[cell].fill = PatternFill(
-                    patternType="solid", start_color=colour
-                )
 
-    def borders(self, row_ranges, sheet):
-        '''
-        Add borders to sheet.
-        Inputs:
-            row_ranges (dict): dict of border type and rows/columns that should
-            have that border
-            sheet (str): sheet in workbook to add borders to
-        '''
-        for side, values in row_ranges.items():
-            for row in values:
-                for cells in sheet[row]:
-                    for cell in cells:
-                        # border style is immutable => copy current and modify
-                        cell_border = cell.border.copy()
-                        if side == 'horizontal':
-                            cell_border.top = THIN
-                        if side == 'horizontal_thick':
-                            cell_border.top = MEDIUM
-                        if side == 'vertical':
-                            cell_border.left = THIN
-                        if side == 'vertical_thick':
-                            cell_border.left = MEDIUM
-                        cell.border = cell_border
         # if self.args.lock_sheet:
         #     cell_to_unlock = ["B3", "C3", "D3", "C4", "C5", "C6",
         #                       "C9", "C10", "C11", "C12", "C13", "C14", "C15",
@@ -1543,94 +1051,4 @@ class excel():
             #                 start_col=report.max_column,
             #                 unlock_row_num=ROW_TO_UNLOCK,
             #                 unlock_col_num=COL_TO_UNLOCK)
-
-    def drop_down(self) -> None:
-        """
-        Function to add drop-downs in the report tab for entering
-        ACMG criteria for classification, as well as a boolean
-        drop down into the additional 'Interpreted' column of
-        the variant sheet(s).
-        """
-        wb = load_workbook(filename=self.args.output)
-
-        # adding dropdowns in report table
-        for sheet_num in range(1, self.args.acmg+1):
-            # adding strength dropdown except for BA1
-            report_sheet = wb[f"snv_interpret_{sheet_num}"]
-            cells_for_strength = ['H10', 'H11', 'H12', 'H13', 'H14', 'H15',
-                                  'H16', 'H17', 'H18', 'H19', 'H20', 'H21',
-                                  'H22', 'H23', 'H24', 'K12', 'K13', 'K16',
-                                  'K17', 'K18', 'K21', 'K22', 'K23', 'K24',
-                                  'K25']
-            strength_options = '"Very Strong, Strong, Moderate, \
-                                 Supporting, NA"'
-            self.get_drop_down(dropdown_options=strength_options,
-                               prompt='Select from the list',
-                               title='Strength',
-                               sheet=report_sheet,
-                               cells=cells_for_strength)
-
-            # add stregth for BA1
-            BA1_options = '"Stand-Alone, Very Strong, Strong, Moderate, \
-                            Supporting, NA"'
-            self.get_drop_down(dropdown_options=BA1_options,
-                               prompt='Select from the list',
-                               title='Strength',
-                               sheet=report_sheet,
-                               cells=['K9'])
-
-            # adding final classification dropdown
-            report_sheet['B26'] = 'FINAL ACMG CLASSIFICATION'
-            report_sheet['B26'].font = Font(bold=True, name=DEFAULT_FONT.name)
-            class_options = '"Pathogenic,Likely Pathogenic, \
-                              Uncertain Significance, \
-                              Likely Benign, Benign"'
-            self.get_drop_down(dropdown_options=class_options,
-                               prompt='Select from the list',
-                               title='ACMG classification',
-                               sheet=report_sheet,
-                               cells=['C26'])
-
-        # adding Interpreted column dropdown in the first variant sheet tab
-        # first_variant_sheet = wb[self.args.sheets[0]]
-        # interpreted_options = '"YES,NO"'
-        # col_letter = self.get_col_letter(first_variant_sheet, "Interpreted")
-        # num_variant = self.vcfs[0].shape[0]
-        # if num_variant > 0:
-        #     cells_for_variant = []
-        #     for i in range(num_variant):
-        #         cells_for_variant.append(f"{col_letter}{i+2}")
-        #     self.get_drop_down(dropdown_options=interpreted_options,
-        #                        prompt='Choose YES or NO',
-        #                        title='Variant interpreted or not?',
-        #                        sheet=first_variant_sheet,
-        #                        cells=cells_for_variant)
-        wb.save(self.args.output)
-
-    def get_drop_down(self, dropdown_options, prompt, title, sheet, cells) -> None:
-        """
-        create the drop-downs items for designated cells
-
-        Parameters
-        ----------
-        dropdown_options: str
-            str containing drop-down items
-        prompt: str
-            prompt message for drop-down
-        title: str
-            title message for drop-down
-        sheet: openpyxl.Writer writer object
-            current worksheet
-        cells: list
-            list of cells to add drop-down
-        """
-        options = dropdown_options
-        val = DataValidation(type='list', formula1=options,
-                             allow_blank=True)
-        val.prompt = prompt
-        val.promptTitle = title
-        sheet.add_data_validation(val)
-        for cell in cells:
-            val.add(sheet[cell])
-        val.showInputMessage = True
-        val.showErrorMessage = True
+   

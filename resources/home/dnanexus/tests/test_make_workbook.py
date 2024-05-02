@@ -4,14 +4,15 @@ import pytest
 import os
 import sys
 from make_workbook import excel
+from get_variant_info import VariantNomenclature, VariantInfo
 from start_process import SortArgs
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 class TestWorkbook():
     '''
     Tests for excel() class in make_workbook script
     '''
-    
 
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(obo_files=True))
@@ -21,10 +22,14 @@ class TestWorkbook():
         obo file arrays on DNAnexus
         '''
         self.args = mock
-        version = "vXXXXX"
-        self.args.obo_files = True
+        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
+            'hpoTermList': [
+                {'hpoBuildNumber': "vXXXXXX"}
+            ]
+        }]}}}}
+
         with pytest.raises(RuntimeError):
-            excel.hpo_version(self, version)
+            excel.get_hpo_obo(self)
 
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(
@@ -35,9 +40,14 @@ class TestWorkbook():
         Test that if the HPO version is invalid a RunTime error is passed for
         obo paths run locally
         '''
-        version = "vXXXXX"
+        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
+            'hpoTermList': [
+                {'hpoBuildNumber': "vXXXXXX"}
+            ]
+        }]}}}}
+        self.args = mock
         with pytest.raises(RuntimeError):
-            excel.hpo_version(mock, version)
+            excel.get_hpo_obo(self)
     
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(obo_path=None, obo_files=True))
@@ -46,27 +56,30 @@ class TestWorkbook():
         Test that the correct path to obo is given based on the version
         specified. This test is for obo_files input from DNAnexus
         '''
-        version = "v2019_02_12"
-        assert excel.hpo_version(
-            mock, version
-            ) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
+        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
+            'hpoTermList': [
+                {'hpoBuildNumber': "v2019_02_12"}
+            ]
+        }]}}}}
+        self.args = mock
+        assert excel.get_hpo_obo(self) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
 
     # @mock.patch('argparse.ArgumentParser.parse_args',
     #         return_value=argparse.Namespace(
-    #             obo_path='/path/to/wherever/'
+    #             obo_path='/path/to/wherever/', obo_files=None
     #             ))
     # def test_correct_hpo_version_path(self, mock):
     #     '''
     #     Test that the correct path to obo is given based on the version
-    #     specified. This test is for obo_files input from DNAnexus
+    #     specified. This test is for obo_path input from the command line
     #     '''
-    #     #self.args = SortArgs.parse_args(self)
+    #     self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
+    #         'hpoTermList': [
+    #             {'hpoBuildNumber': "v2019_02_12"}
+    #         ]
+    #     }]}}}}
     #     self.args = mock
-    #     print(mock.obo_files)
-    #     version = "v2019_02_12"
-    #     assert excel.hpo_version(
-    #         self, version
-    #         ) == "/path/to/wherever/hpo_v20190212.obo"
+    #     assert excel.get_hpo_obo(self) == "/path/to/wherever/hpo_v20190212.obo"
     
     def test_get_panels(self):
         '''
@@ -112,6 +125,18 @@ class TestWorkbook():
     #              "isProband": 'True'
     #          }
 
+class TestVariantInfo():
+    '''
+    Test variant info functions.
+    '''
+    def test_add_cols_to_dict(self):
+        '''
+        Check that function takes list of columns and adds them to a dict with
+        empty strings as the values.
+        '''
+        column_list = ["ColA", "ColB"]
+        assert VariantInfo.add_columns_to_dict(column_list) == {"ColA": '', "ColB": ''}
+
     def test_tier_conversion(self):
         '''
         Test Tiers from JSON are converted into tier representation as desired
@@ -128,20 +153,90 @@ class TestWorkbook():
 
         tiers = []
         for tiering in tiers_to_convert:
-            tiers.append(excel.convert_tier(self, tiering[0], tiering[1]))
+            tiers.append(VariantInfo.convert_tier(tiering[0], tiering[1]))
         
         assert tiers == [
             "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
         ]
-
-    def test_add_cols_to_dict(self):
+    
+    def test_get_af_max(self):
         '''
-        Check that function takes list of columns and adds them to a dict with
-        empty strings as the values.
+        Test that the highest AF is returned for the variant.
         '''
-        self.column_list = ["ColA", "ColB"]
-        assert excel.add_columns_to_dict(self) == {"ColA": '', "ColB": ''}
+        variant = {
+            'variantAttributes': {
+            'alleleFrequencies': [
+                {
+                    'alternateFrequency': 0.00003
+                },
+                {
+                    'alternateFrequency': 0.001
+                }
+            ]
+        }}
+        assert VariantInfo.get_af_max(variant) == 0.001
 
 
+class TestCheckIfProband():
+    '''
+    Tests for excel.check_if_proband function
+    '''
+    proband = "p123456789"
+    variantCalls = [
+        {
+            'participantId': 'pXXXXXXXXX'
+        },
+        {
+            'participantId': 'p123456789'
+        },
+        {
+            'participantId': 'pYYYYYYYYY'
+        }
+    ]
+    def test_check_if_proband(self):
+        '''
+        Check indexing of proband is worked out correctly; here the proband is
+        the second in the list, so we expect index 1 to be returned.
+        '''
+        assert excel.check_if_proband(self, self.variantCalls) == 1
 
-        
+    def test_check_if_proband_not_found(self):
+        '''
+        Check indexing of proband errors if proband cannot be found
+        '''
+        self.variantCalls.pop(1)
+
+        with pytest.raises(RuntimeError):
+            excel.check_if_proband(self, self.variantCalls)
+
+
+class TestVariantNomenclature():
+    '''
+    Test variant nomenclature functions.
+    '''
+    def test_get_ensp(self):
+        '''
+        Check that get_ensp function returns ENSP protein ID in the same list
+        item as the ENST transcript ID
+        '''
+        refseq_tsv = ["ENST0000033\tENSP0000044\tENSG00000022",
+                           "ENST0000066\tENSP0000088\tENSG00000044"]
+        assert VariantNomenclature.get_ensp(
+            refseq_tsv, "ENST0000033"
+        ) == "ENSP0000044"
+
+    
+    # @patch('excel.str_image_page')
+    # def test_str_image_page(self, openpyxl_mock):
+    #     self.workbook = openpyxl_mock.workbook()
+    #     self.assertEqual(
+    #         excel.str_image_page(
+    #             sheetname="STR guidelines",
+    #             cell='B2'
+    #         )
+    #     ), (
+    #         "From CU-WG-REF-40 Guidelines for Rare Disease Whole Genome "
+    #         "Sequencing & Next Generation Sequencing Panel Interpretation & "
+    #         "Reporting"
+    #     )
+

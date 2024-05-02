@@ -44,7 +44,7 @@
         "name": "mane",
         "label": "MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs",
         "class": "file",
-        "optional": true,
+        "optional": false,
         "help": ""
       },
       {
@@ -65,7 +65,7 @@
         "name": "refseq_tsv",
         "label": "Refseq tsv which has Ensembl IDs including protein ID for each gene ID",
         "class": "file",
-        "optional": true,
+        "optional": false,
         "help": ""
       } 
     ],
