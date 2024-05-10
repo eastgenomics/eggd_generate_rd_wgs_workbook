@@ -160,6 +160,7 @@ class TestInterpretationService():
                     "'genomics_england_tiering' or 'Exomiser'"):
             excel.index_interpretation_services(self)
 
+
 class TestVariantInfo():
     '''
     Test variant info functions.
@@ -254,6 +255,10 @@ class TestIndexParticipant():
 
 
 class TestRanking():
+    '''
+    Tests for ranking function
+    '''
+    # TODO: alter depending on feedback
     snvs = [
         {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
         {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
@@ -298,19 +303,3 @@ class TestVariantNomenclature():
         assert VariantNomenclature.get_ensp(
             refseq_tsv, "ENST0000033"
         ) == "ENSP0000044"
-
-    
-    # @patch('excel.str_image_page')
-    # def test_str_image_page(self, openpyxl_mock):
-    #     self.workbook = openpyxl_mock.workbook()
-    #     self.assertEqual(
-    #         excel.str_image_page(
-    #             sheetname="STR guidelines",
-    #             cell='B2'
-    #         )
-    #     ), (
-    #         "From CU-WG-REF-40 Guidelines for Rare Disease Whole Genome "
-    #         "Sequencing & Next Generation Sequencing Panel Interpretation & "
-    #         "Reporting"
-    #     )
-

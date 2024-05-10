@@ -1,5 +1,6 @@
 import dxpy
 import networkx
+import gzip
 import json
 import obonet
 import openpyxl.drawing
@@ -104,31 +105,15 @@ class excel():
     def open_files(self):
         '''
         Open input files and read into variables.
-        '''
-        if 'dnanexus' in self.args.json:
-            json_dict = json.loads(self.args.json)
-            self.wgs_data = DXFile.read_dx_file(self, json_dict)
-            self.wgs_data = json.loads(self.wgs_data[0])
-            # set output prefix to family id, otherwise the file is named the
-            # dx file id for the JSON (not ideal)
-            self.args.output = self.wgs_data["family_id"] + ".xlsx"
-        else:
-            with open(self.args.json) as f:
-                self.wgs_data = json.load(f)
+        '''        
+        with open(self.args.json) as f:
+            self.wgs_data = json.load(f)
 
-        if 'dnanexus' in self.args.mane:
-            mane_dict = json.loads(self.args.mane)
-            self.mane = DXFile.read_dx_file(self, mane_dict)
-        else:
-            with open(self.args.mane) as f:
-                self.mane = f.readlines()
+        with gzip.open(self.args.mane) as f:
+            self.mane = [x.decode('utf8').strip() for x in f.readlines()]
 
-        if 'dnanexus' in self.args.refseq_tsv:
-            refseq_tsv_dict = json.loads(self.args.refseq_tsv)
-            self.refseq_tsv = DXFile.read_dx_file(self, refseq_tsv_dict)
-        else:
-            with open(self.args.refseq_tsv) as refseq_tsv:
-                self.refseq_tsv = refseq_tsv.readlines()
+        with open(self.args.refseq_tsv) as refseq_tsv:
+            self.refseq_tsv = refseq_tsv.readlines()
 
     def summary_page(self):
         '''
@@ -550,7 +535,7 @@ class excel():
                 ranked.append(snv)
 
         to_report = VariantInfo.get_top_3_ranked(ranked)
-                    
+        
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
             snv['reportEvents'] = [snv['reportEvents']]
@@ -991,25 +976,3 @@ class excel():
             ]
         }
         ExcelStyles.borders(self, row_ranges, report)
-
-
-        # if self.args.lock_sheet:
-        #     cell_to_unlock = ["B3", "C3", "D3", "C4", "C5", "C6",
-        #                       "C9", "C10", "C11", "C12", "C13", "C14", "C15",
-        #                       "C16", "C17", "C18", "C19", "C20", "C21", "C22",
-        #                       "C23", "C24", "C25", "C26", "H10", "H11",
-        #                       "H12", "H13", "H14", "H15", "H16", "H17", "H18",
-        #                       "H19", "H20", "H21", "H22", "H23", "H24", "I10",
-        #                       "I11", "I12", "I13", "I14", "I15", "I16", "I17",
-        #                       "I18", "I19", "I20", "I21", "I22", "I23", "I24",
-        #                       "K9", "K12", "K13", "K16", "K17", "K18", "K21",
-        #                       "K22", "K23", "K24", "K25", "L9", "L12", "L13",
-        #                       "L16", "L17", "L18", "L21", "L22", "L23", "L24",
-        #                       "L25", "H26"]
-            # self.lock_sheet(ws=report,
-            #                 cell_to_unlock=cell_to_unlock,
-            #                 start_row=report.max_row,
-            #                 start_col=report.max_column,
-            #                 unlock_row_num=ROW_TO_UNLOCK,
-            #                 unlock_col_num=COL_TO_UNLOCK)
-   

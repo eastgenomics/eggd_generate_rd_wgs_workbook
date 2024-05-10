@@ -323,7 +323,8 @@ class VariantNomenclature():
 
         for line in mane:
             if ensembl in line:
-                refseq = line.split(',')[3].strip("\"")
+                refseq = [x for x in line.split() if x.startswith('NM')]
+                refseq = refseq[0]
                 break
         return refseq
 

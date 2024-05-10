@@ -29,7 +29,7 @@ main() {
 
     #mark-section "Generating workbook"
     /usr/bin/time -v python3 start_process.py \
-    --json "$json" --mane "$mane" --refseq_tsv "$refseq_tsv" $args
+    --json /home/dnanexus/in/json/*json --mane /home/dnanexus/in/mane/* --refseq_tsv /home/dnanexus/in/refseq_tsv/*tsv $args
     mv *.xlsx /home/dnanexus/out/xlsx_reports
     #mark-section "Uploading workbook"
     output_xlsx=$(dx upload /home/dnanexus/out/xlsx_reports/* --brief)
