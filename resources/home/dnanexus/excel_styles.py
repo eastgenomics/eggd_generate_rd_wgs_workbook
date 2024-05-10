@@ -58,17 +58,17 @@ class ExcelStyles():
         Inputs:
             sheet: openpxyl sheet on which to resize the columns
         '''
-        for col in ['C', 'D']:
+        for col in ['C', 'D', 'M']:
             sheet.column_dimensions[col].width = 14
-        sheet.column_dimensions['M'].width = 14
-        for col in ['J', 'S']:
+        for col in ['J']:
             sheet.column_dimensions[col].width = 10
-        for col in ['H', 'I', 'L']: 
+        for col in ['F', 'G', 'H', 'I', 'L']:
             sheet.column_dimensions[col].width = 6
-        for col in ['O', 'P', 'V']:
+        for col in ['R', 'S', 'T']:
             sheet.column_dimensions[col].width = 12
         sheet.column_dimensions['B'].width = 5
-        for col in ['M', 'N']:
+        sheet.column_dimensions['O'].width = 15
+        for col in ['M', 'N', 'P']:
             sheet.column_dimensions[col].width = 20
         for col in ['W', 'X']:
             sheet.column_dimensions[col].width = 25

@@ -35,7 +35,7 @@ class SortArgs():
             help="path to output directory"
         )
         parser.add_argument(
-            '--acmg', type=int, default=2,
+            '--acmg', type=int, default=3,
             help='add extra ACMG reporting template sheet(s)'
         )
         parser.add_argument(

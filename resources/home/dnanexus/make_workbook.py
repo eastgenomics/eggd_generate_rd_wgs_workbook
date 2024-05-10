@@ -32,6 +32,7 @@ class excel():
         self.writer = None
         self.workbook = None
         self.proband = None
+        self.proband_sex = None
         self.mother = None
         self.father = None
         self.bold_content = None
@@ -57,10 +58,9 @@ class excel():
             "HGVSc",
             "HGVSp",
             "Priority",
-            "Inheritance",
-            "Segregation pattern",
-            "Inheritance mode",
             "Zygosity",
+            "Inheritance mode",
+            "Inheritance",
             "Depth",
             "AF Max",
             "Penetrance filter",
@@ -79,7 +79,7 @@ class excel():
         print(f"Writing to {self.args.output}...")
         # Write in workbook
         self.summary_page()
-        self.find_interpretation_service()
+        self.index_interpretation_services()
         self.create_gel_tiering_variant_page()
         self.create_additional_analysis_page()
         self.str_image_page()
@@ -144,8 +144,10 @@ class excel():
             (8, 1): "Father",
             (5, 2): "ID",
             (5, 3): "GM/SP number",
-            (5, 4): "Affected?",
-            (5, 5): "HPO",
+            (5, 4): "NUH number",
+            (5, 5): "Sex",
+            (5, 6): "Affected?",
+            (5, 7): "HPO",
             (2, 1): "Clinical indication",
             (1, 8): "Flags",
             (2, 8): "Test code",
@@ -162,19 +164,14 @@ class excel():
             (13, 2): "Indication",
             (13, 3): "Version",
             (13, 4): "Panel name",
-            (19, 1): "Tiered variants",
-            (19, 2): "In this case",
-            (19, 3): "To be reported",
-            (25, 1): "Extended analysis",
-            (25, 2): "In this case",
-            (25, 3): "To be reported",
-            (20, 1): "SNV Tier 1",
-            (21, 1): "SNV Tier 2",
-            (22, 1): "CNV Tier 1",
-            (23, 1): "STRs",
-            (23, 1): "STRs",
-            (26, 1): "Exomiser top 3 (score ≥ 0.75)",
-            (27, 1): "De novo",
+            (21, 2): "In this case",
+            (21, 3): "To be reported",
+            (22, 1): "SNV Tier 1",
+            (23, 1): "SNV Tier 2",
+            (24, 1): "CNV Tier 1",
+            (25, 1): "STR Tier 1",
+            (27, 1): "Exomiser top 3 (score ≥ 0.75)",
+            (28, 1): "De novo",
         }
 
         self.summary_content = {
@@ -188,6 +185,8 @@ class excel():
         self.get_panels()
         self.get_penetrance()
         self.person_data()
+        # TODO: Method to get SP number/NUH number from Epic via Clarity
+        # export and autopopulate summary page with this info.
 
         # write summary content and titles to page
         for key, val in self.bold_content.items():
@@ -201,15 +200,17 @@ class excel():
         # Set column widths
         summary_sheet.column_dimensions["A"].width = 20
         summary_sheet.column_dimensions["B"].width = 16
-        summary_sheet.column_dimensions["C"].width = 14
-        summary_sheet.column_dimensions["D"].width = 14
+        for col in ["C", "D", "F"]:
+            summary_sheet.column_dimensions[col].width = 14
 
         row_ranges = {
             'horizontal': [
-                'A33:C33', 'A34:C34', 'A36:C36'
+                'A33:C33', 'A34:C34', 'A36:C36', 'A30:B30', 'A31:B31',
+                'A32:B32'
             ],
             'vertical':[
-                'A33:A35', 'B33:B35', 'C33:C35', 'D33:D35'
+                'A33:A35', 'B33:B35', 'C33:C35', 'D33:D35', 'A30:A31',
+                'B30:B31', 'C30:C31',
             ]
         }
 
@@ -293,6 +294,24 @@ class excel():
 
         return hpo_names
 
+    def add_person_data_to_summary(self, member, index, obo):
+        '''
+        Function to add data that is added for all family members to the
+        summary sheet. Isolated here as it is the same for all family members
+        Inputs:
+            member (dict): dictionary for that member in the pedigree in the
+            GEL JSON
+            obo (str): path to obo file
+            index (int): row to populate in the sheet, specific to family
+            member
+        Outputs:
+            None, adds content to openpxyl workbook
+        '''
+        self.summary_content[(index, 2)] = member["participantId"]
+        self.summary_content[(index, 5)] = member["sex"]
+        self.summary_content[(index, 6)] = member["affectionStatus"]
+        self.summary_content[(index, 7)] = self.get_hpo_terms(member, obo)
+
     def person_data(self):
         '''
         Find data for participants and add to summary sheet.
@@ -300,53 +319,28 @@ class excel():
         term names, participant ID, sample ID to the summary sheet
         It will also do this for any relatives in the JSON
         '''
-        num_participants = 0
         # Get version of HPO to use for terms
         obo = self.get_hpo_obo()
+        pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
         for member in self.wgs_data['referral']['referral_data']["pedigree"]["members"]:
             if member["isProband"] == True:
-                num_participants += 1
-                terms_list = self.get_hpo_terms(member, obo)
-                self.summary_content[(6, 5)] = terms_list
-                self.summary_content[(6, 4)] = member["affectionStatus"]
-                self.summary_content[(6, 2)] = member["participantId"]
+                self.add_person_data_to_summary(member, 6, obo)
                 self.proband = member["participantId"]
+                self.proband_sex = member["sex"]
                 self.summary_content[(10, 2)] = member["samples"][0]["sampleId"]
 
-            elif member["additionalInformation"]["relation_to_proband"] == "Mother":
-                num_participants += 1
-                terms_list = self.get_hpo_terms(member, obo)
-                self.summary_content[(7, 5)] = terms_list
-                self.summary_content[(7, 4)] = member["affectionStatus"]
-                self.summary_content[(7, 2)] = member["participantId"]
+            elif pb_relate(member) == "Mother":
+                self.add_person_data_to_summary(member, 7, obo)
                 self.mother = member["participantId"]
 
-            elif member["additionalInformation"]["relation_to_proband"] == "Father":
-                num_participants += 1
-                terms_list = self.get_hpo_terms(member, obo)
-                self.summary_content[(8, 5)] = terms_list
-                self.summary_content[(8, 4)] = member["affectionStatus"]
-                self.summary_content[(8, 2)] = member["participantId"]
-                self.father = member["participantId"]
-            else:
-                num_participants += 1
-                self.summary_content[(9, 1)] = member["additionalInformation"][
-                    "relation_to_proband"
-                    ]
-                terms_list = self.get_hpo_terms(member, obo)
-                self.summary_content[(9, 5)] = terms_list
-                self.summary_content[(9, 4)] = member["affectionStatus"]
-                self.summary_content[(9, 2)] = member["participantId"]
+            elif pb_relate(member) == "Father":
+                self.add_person_data_to_summary(member, 8, obo)
                 self.father = member["participantId"]
 
-        if num_participants != len(
-            self.wgs_data['referral']['referral_data']["pedigree"]["members"]
-            ):
-            raise RuntimeError(
-                "Number of participants found does not equal number of family"
-                " members in JSON."
-            )
+            else:
+                self.summary_content[(9, 1)] = pb_relate(member)
+                self.add_person_data_to_summary(member, 9, obo)
 
     def get_panels(self):
         '''
@@ -386,6 +380,32 @@ class excel():
 
         self.summary_content[(3, 2)] = disease_penetrance
 
+    def index_interpretation_services(self):
+        '''
+        The JSON contains two interpretation services: GEL tiering and Exomiser
+        This function finds the index for each so these can be referred to
+        correctly and sets self.gel_index to the index for the GEL tiering and
+        self.ex_index to to the index for the Exomiser interpretation.
+        '''
+        for interpretation in self.wgs_data["interpretedGenomes"]:
+            if interpretation['interpretedGenomeData'][
+                'interpretationService'
+                ] == 'genomics_england_tiering':
+                self.gel_index = self.wgs_data[
+                    "interpretedGenomes"
+                    ].index(interpretation)
+            elif interpretation['interpretedGenomeData'][
+                'interpretationService'
+                ] == 'Exomiser':
+                self.ex_index = self.wgs_data[
+                    "interpretedGenomes"
+                    ].index(interpretation)
+            else:
+                raise RuntimeError(
+                    "Interpretation services in JSON not recognised as "
+                    "'genomics_england_tiering' or 'Exomiser'"
+                )
+
     def str_image_page(self):
         '''
         STR table is useful for interpretation, so will be included on a sheet
@@ -413,13 +433,18 @@ class excel():
         for variant in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["variants"]:
-            proband_index = self.check_if_proband(variant["variantCalls"])
 
             for event in variant["reportEvents"]:                
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = variant["reportEvents"].index(event)
                     var_dict = VariantInfo.get_snv_info(
-                        variant, proband_index, event_index, self.column_list
+                        variant,
+                        self.proband,
+                        event_index,
+                        self.column_list,
+                        self.mother,
+                        self.father,
+                        self.proband_sex
                         )
                     c_dot, p_dot = VariantNomenclature.get_hgvs_gel(
                         variant,
@@ -436,14 +461,10 @@ class excel():
             ]["interpretedGenomeData"][
                 "shortTandemRepeats"
             ]:
-            proband_index = self.check_if_proband(
-                str_variant["variantCalls"]
-                )
-
             for event in str_variant["reportEvents"]:                
                 if event["tier"] == "TIER1":
                     var_dict = VariantInfo.get_str_info(
-                        str_variant, proband_index, self.column_list
+                        str_variant, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
         
@@ -485,10 +506,10 @@ class excel():
         # Add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         count_dict = {
-            'B20': "TIER1_SNV",
-            'B21': "TIER2_SNV",
-            'B22': "TIER1_CNV",
-            'B23': "TIER1_STR",
+            'B22': "TIER1_SNV",
+            'B23': "TIER2_SNV",
+            'B24': "TIER1_CNV",
+            'B25': "TIER1_STR",
         }
         for key, val in count_dict.items():
             if val in self.var_df.Priority.values:
@@ -496,62 +517,12 @@ class excel():
             else:
                 summary_sheet[key] = 0
 
-    def find_interpretation_service(self):
-        '''
-        The JSON contains two interpretation services: GEL tiering and Exomiser
-        This function finds the index for each so these can be referred to
-        correctly and sets self.gel_index to the index for the GEL tiering and
-        self.ex_index to to the index for the Exomiser interpretation.
-        '''
-        for interpretation in self.wgs_data["interpretedGenomes"]:
-            if interpretation['interpretedGenomeData'][
-                'interpretationService'
-                ] == 'genomics_england_tiering':
-                self.gel_index = self.wgs_data[
-                    "interpretedGenomes"
-                    ].index(interpretation)
-            elif interpretation['interpretedGenomeData'][
-                'interpretationService'
-                ] == 'Exomiser':
-                self.ex_index = self.wgs_data[
-                    "interpretedGenomes"
-                    ].index(interpretation)
-            else:
-                raise RuntimeError(
-                    "Interpretation services in JSON not recognised as "
-                    "'genomics_england_tiering' or 'Exomiser'"
-                )
-
-    def check_if_proband(self, var_calls):
-        '''
-        Take list of variantCalls for a variant and return index of the
-        proband.
-        Inputs:
-            var_calls (list): list of calls of variant
-        Outputs:
-            index (int): index of variantCalls list for the proband
-        '''
-        index = None
-        for call in var_calls:
-            if call['participantId'] == self.proband:
-                index = var_calls.index(call)
-                break
-
-        if index is None:
-            raise RuntimeError(
-                f"Unable to find proband ID {self.proband} in variant"
-                f"{var_calls}"
-            )
-
-        return index
-
     def create_additional_analysis_page(self):
         '''
         Get Tier3/Null SNVs for Exomiser/deNovo analysis
         '''
         variant_list = []
         ranked = []
-        to_report = []
         # Look through Exomiser SNVs and return those that are ranked
         # 1, 2, or 3 and have a score >= 0.75
         for snv in self.wgs_data["interpretedGenomes"][
@@ -572,33 +543,13 @@ class excel():
             # ranked event from this list + set it as the only report event
             # for that SNV (we do not need the other events now)
             if ev_to_look_at:
-                top_event = min(ev_to_look_at, key=lambda x: float(
+                top_event = min(ev_to_look_at, key=lambda x:
                     x['vendorSpecificScores']['rank']
-                ))
+                )
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
-        # go through list of all variants and select top ranked and add to a
-        # list of variants to report
-        while len(to_report) < 3:
-            rank1 = min(ranked, key=lambda x: float(
-                x['reportEvents']['vendorSpecificScores']['rank']
-            ))
-            rank1_idx = ranked.index(rank1)
-            to_report.append(rank1)
-            del ranked[rank1_idx]
-            rank2 = min(ranked, key=lambda x: float(
-                x['reportEvents']['vendorSpecificScores']['rank']
-            ))
-            rank2_idx = ranked.index(rank2)
-            to_report.append(rank2)
-            del ranked[rank2_idx]
-            rank3 = min(ranked, key=lambda x: float(
-                x['reportEvents']['vendorSpecificScores']['rank']
-            ))
-            rank3_idx = ranked.index(rank3)
-            del ranked[rank3_idx]
-            to_report.append(rank3)
+        to_report = VariantInfo.get_top_3_ranked(ranked)
                     
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
@@ -606,10 +557,15 @@ class excel():
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
-            i = self.check_if_proband(snv["variantCalls"])
             rank = snv['reportEvents'][0]['vendorSpecificScores']['rank']
             var_dict = VariantInfo.get_snv_info(
-                snv, i, event_index, self.column_list
+                snv,
+                self.proband,
+                event_index,
+                self.column_list,
+                self.mother,
+                self.father,
+                self.proband_sex
             )
             var_dict["Priority"] = f"Exomiser Rank {rank}"
             var_dict["HGVSc"], var_dict["HGVSp"] = (
@@ -634,7 +590,13 @@ class excel():
                     if event['deNovoQualityScore'] > 0.0013:
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantInfo.get_snv_info(
-                            snv, i, event_index, self.column_list
+                            snv,
+                            self.proband,
+                            event_index,
+                            self.column_list,
+                            self.mother,
+                            self.father,
+                            self.proband_sex
                         )
                         var_dict["Priority"] = "De novo"
                         var_dict["Inheritance"] = "De novo"
@@ -656,7 +618,9 @@ class excel():
                 if event['deNovoQualityScore'] is not None:
                     if event['deNovoQualityScore'] > 0.02:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_cnv_info(sv, event_index)
+                        var_dict = VariantInfo.get_cnv_info(sv, 
+                                                            event_index,
+                                                            self.column_list)
                         var_dict["Priority"] = "De novo"
                         var_dict["Inheritance"] = "De novo"
                         variant_list.append(var_dict)
@@ -683,10 +647,10 @@ class excel():
                 indicator='_merge',
                 how='outer'
             )
-            # Keep left only == keep only those that are in exomiser df and 
+            # Keep left only == keep only those that are in exomiser df and
             # not in tiered df
             ex_df = ex_df[ex_df['_merge'] == 'left_only']
-            # Clean up merge columns (drop _merge, and priority_y, rename 
+            # Clean up merge columns (drop _merge, and priority_y, rename
             # priority_x)
             ex_df = ex_df.drop(labels=['_merge'], axis='columns')
             ex_df = ex_df.rename(columns={'Priority_x': 'Priority'})
@@ -706,17 +670,13 @@ class excel():
 
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
-        count_dict = {
-            'B26': "Exomiser",
-            'B27': "De novo",
-        }
-        for key, val in count_dict.items():
-            if 'Priority' in ex_df.columns and val in ex_df.Priority.values:
-                summary_sheet[key] = ex_df['Priority'].value_counts()[val]
-            else:
-                summary_sheet[key] = 0
-
-        summary_sheet['B26'] = ex_df['Priority'].str.startswith('Exomiser').sum()
+        if 'Priority' in ex_df.columns:
+            summary_sheet['B28'] = ex_df['Priority'].str.startswith(
+                "De novo"
+            ).sum()
+            summary_sheet['B27'] = ex_df['Priority'].str.startswith(
+                'Exomiser'
+            ).sum()
 
     def write_cnv_reporting_template(self, cnv_sheet_num):
         '''
@@ -755,7 +715,8 @@ class excel():
             "family?": [16, 2],
             "Does gene of interest have evidence of HI/TS?": [17,2],
             "In this case is the CNV de novo, inherited, unknown? Good"\
-            "phenotype fit? Non-segregation in affected family members?": [19, 2],
+            "phenotype fit? Non-segregation in affected family"\
+            "members?": [19, 2],
             "1A/3": [7, 7],
             "2G/2F for loss,\n2C-2G for gain": [11, 7],
             "2A-2B": [13, 7],
@@ -771,7 +732,7 @@ class excel():
             cnv.cell(val[0], val[1]).font = Font(
                 bold=True, name=DEFAULT_FONT.name
             )
-        
+
         for key, val in content.items():
             cnv.cell(val[0], val[1]).value = key
 
@@ -814,7 +775,7 @@ class excel():
                 'B3:F3', 'B5:F5', 'B6:G6', 'B7:G7', 'B20:G20', 'B21:G21'
             ],
             'vertical': [
-                'E2:E3', 'G8:G26'
+                'E2:E3', 'G6:G20'
             ],
             'vertical_thick': [
                 'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20'

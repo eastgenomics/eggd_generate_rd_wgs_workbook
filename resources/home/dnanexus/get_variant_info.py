@@ -55,12 +55,8 @@ class VariantInfo():
             tier = "TIER1_CNV"
         elif tier == "TIER1" and var_type == "STR":
             tier = "TIER1_STR"
-        elif tier == "TIER2" and var_type == "STR":
-            tier = "TIER2_STR"
-            # TODO fix this; there are no TIER2 STRs!
-            # TODO write in readme how var filtering works!
         return tier
-    
+
     @staticmethod
     def get_af_max(variant):
         '''
@@ -81,7 +77,7 @@ class VariantInfo():
         return highest_af
 
     @staticmethod
-    def get_inheritance(variant, proband_index):
+    def get_inheritance(variant, m_idx, f_idx, p_sex):
         '''
         Work out inheritance of variant based on zygosity of parents
         Inputs:
@@ -91,67 +87,65 @@ class VariantInfo():
         Outputs:
             inheritance (str): inferred inheritance of the variant, or None.
         '''
-        # TODO entirely reconfigure this based on what GEL said!
+        zygosity = lambda x, y: x['variantCalls'][y]['zygosity']
+
         inheritance = None
-        mother_index = None
-        father_index = None
+        maternal = False
+        paternal = False
+
         inheritance_types = ['alternate_homozygous', 'heterozygous']
-        calls = variant['variantCalls']
+        
+        if m_idx is not None:
+            if zygosity(variant, m_idx) in inheritance_types:
+                maternal = True
 
-        # if self.mother and self.father:
-        #     # find index of variant call list for mother and father            
-        #     for call in variant['variantCalls']:
-        #         print(call)
-        #         if call['participantId'] == self.mother:
-        #             mother_index = variant['variantCalls'].index(call)
-        #         elif call['participantId'] == self.father:
-        #             father_index = variant['variantCalls'].index(call)
-        #     if mother_index and father_index:
-        #         if calls[proband_index]['zygosity'] in inheritance_types:
+        if f_idx is not None:
+            if zygosity(variant, f_idx) in inheritance_types:
+                if (p_sex == 'MALE' and
+                variant['variantCoordinates']['chromosome'] == 'X'):
+                    paternal = False
+                else:
+                    paternal = True
 
-        #             if (calls[
-        #                     mother_index
-        #                     ]['zygosity'] == 'reference_homozygous'
-        #                 and calls[
-        #                     father_index
-        #                     ]['zygosity'] in inheritance_types
-        #                 ):
-        #                 inheritance = "paternal"
+        if maternal is True and paternal is False:
+            inheritance = "maternal"
 
-        #             elif (calls[
-        #                     mother_index
-        #                     ]['zygosity'] in inheritance_types
-        #                 and calls[
-        #                     father_index
-        #                     ]['zygosity'] == 'reference_homozygous'
-        #                 ):
-        #                 inheritance = "maternal"
-        #     else:
-        #         confusing_call = calls[proband_index]['zygosity']
-        #         print(
-        #             f"proband call {confusing_call} not recognised"
-        #         )
-        #         # can we reliable say this? it could have been inherited from the father
-        # # we just don't have his data?
-        # elif self.mother and not self.father:
-        #     for call in variant['variantCalls']:
-        #         if call['participantId'] == self.mother:
-        #             mother_index = variant['variantCalls'].index(call)
-        #     if calls[mother_index]['zygosity'] in inheritance_types:
-        #         inheritance = "maternal"
-        # # same as above?
-        # elif self.father and not self.mother:
-        #     for call in variant['variantCalls']:
-        #         if call['participantId'] == self.father:
-        #             father_index = variant['variantCalls'].index(call)
+        elif maternal is False and paternal is True:
+            inheritance = "paternal"
 
-        #     if calls[father_index]['zygosity'] in inheritance_types:
-        #         inheritance = "paternal"
+        elif maternal is True and paternal is True:
+            inheritance = "both"
 
         return inheritance
 
     @staticmethod
-    def get_str_info(variant, proband_index, columns):
+    def index_participant(variant, participant_id):
+        '''
+        Take list of variantCalls for a variant and return index of the
+        participant.
+        Inputs:
+            var_calls (list): list of calls of variant
+        Outputs:
+            index (int): index of variantCalls list for the proband
+        '''
+        index = None
+        if participant_id is not None:
+            for call in variant['variantCalls']:
+                if call['participantId'] == participant_id:
+                    index = variant['variantCalls'].index(call)
+                    break
+
+            if index is None:
+                raise RuntimeError(
+                    f"Unable to find proband ID {participant_id} in variant"
+                    f"{variant['variantCalls']}"
+                )
+
+        return index
+
+
+    @staticmethod
+    def get_str_info(variant, proband, columns):
         '''
         Fill in variant dict for specific STR variant
         Inputs:
@@ -162,7 +156,12 @@ class VariantInfo():
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
         '''
+        num_copies = lambda x, y, z: x['variantCalls'][y]['numberOfCopies'][
+            z
+            ]['numberOfCopies']
+
         var_dict = VariantInfo.add_columns_to_dict(columns)
+        pb_idx = VariantInfo.index_participant(variant, proband)
         var_dict["Chr"] = variant["coordinates"]["chromosome"]
         var_dict["Pos"] = variant["coordinates"]["start"]
         var_dict["End"] = variant["coordinates"]["end"]
@@ -172,48 +171,54 @@ class VariantInfo():
         var_dict["Repeat"] = variant[
             "shortTandemRepeatReferenceData"
         ]["repeatedSequence"]
-        var_dict["STR1"] = variant['variantCalls'][proband_index][
-            'numberOfCopies'
-        ][0]['numberOfCopies']
-        var_dict["STR2"] = variant['variantCalls'][proband_index][
-            'numberOfCopies'
-        ][1]['numberOfCopies']
+        var_dict["STR1"] = num_copies(variant, pb_idx, 0)
+        var_dict["STR2"] = num_copies(variant, pb_idx, 1)
         var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
         return var_dict
 
     @staticmethod
-    def get_snv_info(variant, pb_index, ev_index, columns):
+    def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
         '''
         Fill in variant dict for specific SNV
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
-            pb_index (int): index of variantCalls list for the proband
+            pb (str): participant ID of proband
             ev_index (int): index of reportEvents list for the event
+            columns (list): list of columns to make into keys for variant dict
+            mother (str): participant ID of mother
+            father (str): participant ID of father
+            pb_sex (str): sex of proband
         Outputs:
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
         '''
         var_dict = VariantInfo.add_columns_to_dict(columns)
+        m_idx = VariantInfo.index_participant(variant, mother)
+        f_idx = VariantInfo.index_participant(variant, father)
+        pb_idx = VariantInfo.index_participant(variant, pb)
         var_dict["Chr"] = variant["variantCoordinates"]["chromosome"]
         var_dict["Pos"] = variant["variantCoordinates"]["position"]
         var_dict["Ref"] = variant["variantCoordinates"]["reference"]
         var_dict["Alt"] = variant["variantCoordinates"]["alternate"]
         var_dict["Type"] = "SNV"
         var_dict["Priority"] = VariantInfo.convert_tier(
-            variant["reportEvents"][ev_index]["tier"], "SNV"
+            variant["reportEvents"][ev_idx]["tier"], "SNV"
         )
-        var_dict["Zygosity"] = variant["variantCalls"][pb_index]["zygosity"]
-        var_dict["Depth"] = variant["variantCalls"][pb_index]['depthAlternate']
+        var_dict["Zygosity"] = variant["variantCalls"][pb_idx]["zygosity"]
+        var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
         var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
         var_dict['AF Max'] = VariantInfo.get_af_max(variant)
-        var_dict["Penetrance filter"] = variant["reportEvents"][ev_index]["penetrance"]
-        var_dict["Inheritance mode"] = variant["reportEvents"][ev_index][
+        var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
+            "penetrance"
+        ]
+        # TODO: Convert MOI into more readable names, waiting for analyist
+        # feedback before actioning.
+        var_dict["Inheritance mode"] = variant["reportEvents"][ev_idx][
             "modeOfInheritance"
         ]
-        var_dict["Segregation pattern"] = variant["reportEvents"][ev_index][
-            "segregationPattern"
-        ]
-        var_dict["Inheritance"] = VariantInfo.get_inheritance(variant, pb_index)
+        var_dict["Inheritance"] = (
+            VariantInfo.get_inheritance(variant, m_idx, f_idx, pb_sex)
+        )
         return var_dict
 
     @staticmethod
@@ -243,6 +248,60 @@ class VariantInfo():
         var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
         var_dict['AF Max'] = VariantInfo.get_af_max(variant)
         return var_dict
+
+    @staticmethod
+    def get_top_3_ranked(ranked):
+        '''
+        Get top 3 ranked Exomiser variants; this function uses a podium format
+        so that equal ranks can be reported back.
+        '''
+        # TODO: Reconfigure based on analyst feedback
+        # Debate between “olympic-style” podium and “boxing-style” podium.
+        # i.e. should this be 1 2 2 3 == 1 2 2 or 1 2 2 3
+        gold = []
+        silver = []
+        bronze = []
+
+        rank = lambda x: x['reportEvents']['vendorSpecificScores']['rank']
+
+        ordered_list = sorted(ranked, key=rank)
+        
+        for snv in ordered_list:
+            if not gold:
+                gold = [snv]
+                continue
+            else:
+                if rank(snv) == rank(gold[0]):
+                    gold.append(snv)
+                    continue
+            
+            if len(gold)>=3:
+                break
+
+            if not silver:
+                silver = [snv]
+                continue
+            else:
+                if rank(snv) == rank(silver[0]):
+                    silver.append(snv)
+                    continue
+            
+            if len(gold) + len(silver)>=3:
+                break
+
+            if not bronze:
+                bronze = [snv]
+                continue
+            else:
+                if rank(snv) == rank(bronze[0]):
+                    bronze.append(snv)
+                    continue
+                else:
+                    break
+
+        to_report = gold + silver + bronze
+
+        return to_report
 
 class VariantNomenclature():
     '''

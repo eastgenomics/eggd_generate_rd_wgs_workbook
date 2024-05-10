@@ -125,6 +125,41 @@ class TestWorkbook():
     #              "isProband": 'True'
     #          }
 
+
+class TestInterpretationService():
+    '''
+    Test that the function to find interpretation service works as expected
+    '''
+    wgs_data = {
+        'interpretedGenomes': [
+            {'interpretedGenomeData': {
+                'interpretationService': 'genomics_england_tiering'}
+            },
+            {'interpretedGenomeData': {'interpretationService': 'Exomiser'}}
+        ]
+    }
+    def test_indexing_of_interpretation_service(self):
+        '''
+        Test that indexes are correctly found. GEL tiering is the first in the
+        list, so should be indexed at 0, and Exomiser is second, so should be
+        indexed at 1
+        '''
+        excel.index_interpretation_services(self)
+        assert self.ex_index == 1 and self.gel_index == 0
+
+    def test_error_raised_if_invalid_interpretation_service(self):
+        '''
+        Error should be raised if neither genomics_england_tiering' or
+        'Exomiser' given as interpretation service
+        '''
+        self.wgs_data["interpretedGenomes"][0]['interpretedGenomeData'][
+                'interpretationService'
+                ] = 'invalid_service'
+        with pytest.raises(RuntimeError,
+                    match="Interpretation services in JSON not recognised as "
+                    "'genomics_england_tiering' or 'Exomiser'"):
+            excel.index_interpretation_services(self)
+
 class TestVariantInfo():
     '''
     Test variant info functions.
@@ -177,37 +212,76 @@ class TestVariantInfo():
         assert VariantInfo.get_af_max(variant) == 0.001
 
 
-class TestCheckIfProband():
+class TestIndexParticipant():
     '''
-    Tests for excel.check_if_proband function
+    Tests for get_variant_info.index_participant
     '''
     proband = "p123456789"
-    variantCalls = [
-        {
-            'participantId': 'pXXXXXXXXX'
-        },
-        {
-            'participantId': 'p123456789'
-        },
-        {
-            'participantId': 'pYYYYYYYYY'
-        }
-    ]
-    def test_check_if_proband(self):
+    variant = {
+        'variantCalls': [
+            {
+                'participantId': 'pXXXXXXXXX'
+            },
+            {
+                'participantId': 'p123456789'
+            },
+            {
+                'participantId': 'pYYYYYYYYY'
+            }
+    ]}
+    def test_index_if_proband(self):
         '''
         Check indexing of proband is worked out correctly; here the proband is
         the second in the list, so we expect index 1 to be returned.
         '''
-        assert excel.check_if_proband(self, self.variantCalls) == 1
+        assert VariantInfo.index_participant(self.variant, self.proband) == 1
 
-    def test_check_if_proband_not_found(self):
+    def test_index_if_proband_not_found(self):
         '''
-        Check indexing of proband errors if proband cannot be found
+        Check indexing of participant errors if proband cannot be found
         '''
-        self.variantCalls.pop(1)
+        self.variant['variantCalls'].pop(1)
 
         with pytest.raises(RuntimeError):
-            excel.check_if_proband(self, self.variantCalls)
+            VariantInfo.index_participant(self.variant, self.proband)
+    
+    def test_returns_none_if_no_idx_provided(self):
+        '''
+        Check if index is None (i.e. there is no mother and/or father) None
+        is returned.
+        '''
+        assert VariantInfo.index_participant(self.variant, None) is None
+
+
+class TestRanking():
+    snvs = [
+        {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
+        {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
+        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+        {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
+    ]
+    def test_can_handle_two_bronze(self):
+        '''
+        Check both third ranked items are returned.
+        '''
+        assert VariantInfo.get_top_3_ranked(self.snvs) == [
+            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
+        ]
+    def test_can_handle_two_silvers(self):
+        '''
+        Check no third ranked item is returned if there are two second ranked
+        items
+        '''
+        self.snvs[2] = {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+        assert VariantInfo.get_top_3_ranked(self.snvs) == [
+            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+        ]
 
 
 class TestVariantNomenclature():
