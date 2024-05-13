@@ -22,6 +22,7 @@ DEFAULT_FONT.name = 'Calibri'
 ROW_TO_UNLOCK = 500
 COL_TO_UNLOCK = 200
 
+
 class excel():
     '''
     Functions to generate excel workbook of variants
@@ -98,7 +99,7 @@ class excel():
     def open_files(self):
         '''
         Open input files and read into variables.
-        '''        
+        '''
         with open(self.args.json) as f:
             self.wgs_data = json.load(f)
 
@@ -190,7 +191,7 @@ class excel():
                 'A33:C33', 'A34:C34', 'A36:C36', 'A30:B30', 'A31:B31',
                 'A32:B32'
             ],
-            'vertical':[
+            'vertical': [
                 'A33:A35', 'B33:B35', 'C33:C35', 'D33:D35', 'A30:A31',
                 'B30:B31', 'C30:C31',
             ]
@@ -202,7 +203,7 @@ class excel():
         '''
         Select which version of HPO to use based on which version was used by
         GEL when the JSON was made.
-        Works with input obo_files (DNAnexus array of obo files) and input 
+        Works with input obo_files (DNAnexus array of obo files) and input
         obo_path (local path to directory containing obo files)
         Inputs:
             version (str): version of HPO used in JSON
@@ -216,9 +217,9 @@ class excel():
 
         if self.args.obo_files:
             if version == "v2019_02_12":
-                obo="/home/dnanexus/obo_files/hpo_v20190212.obo"
+                obo = "/home/dnanexus/obo_files/hpo_v20190212.obo"
             elif version == "releases/2018-10-09":
-                obo="/home/dnanexus/obo_files/hpo_v20181009.obo"
+                obo = "/home/dnanexus/obo_files/hpo_v20181009.obo"
             else:
                 raise RuntimeError(
                     f"GEL version of HPO ontology {version} does not match "
@@ -312,7 +313,7 @@ class excel():
         for member in self.wgs_data['referral']['referral_data']["pedigree"][
             "members"
             ]:
-            if member["isProband"] == True:
+            if member["isProband"]:
                 self.add_person_data_to_summary(member, 6, obo)
                 self.proband = member["participantId"]
                 self.proband_sex = member["sex"]
@@ -445,8 +446,7 @@ class excel():
         for snv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["variants"]:
-
-            for event in snv["reportEvents"]:                
+            for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
                     var_dict = VariantInfo.get_snv_info(
@@ -473,8 +473,7 @@ class excel():
             ]["interpretedGenomeData"][
                 "shortTandemRepeats"
             ]:
-
-            for event in str["reportEvents"]:                
+            for event in str["reportEvents"]:
                 if event["tier"] == "TIER1":
                     var_dict = VariantInfo.get_str_info(
                         str, self.proband, self.column_list
@@ -485,7 +484,6 @@ class excel():
         for cnv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
-
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
                 # CNVs can be reported as Tier 1 or Tier A, GEL updated the
@@ -508,7 +506,7 @@ class excel():
             # if both Tier 1 and Tier 2, keep Tier 1 entry only
             self.var_df = self.var_df.sort_values(
                 by=['Priority']
-                ).drop_duplicates(subset=['Chr','Pos','Ref', 'Alt', 'End'])
+                ).drop_duplicates(subset=['Chr', 'Pos', 'Ref', 'Alt', 'End'])
             # Sort by Priority and then Gene symbol
             self.var_df = self.var_df.sort_values(['Priority', 'Gene'])
             self.var_df.to_excel(
@@ -528,7 +526,9 @@ class excel():
         }
         for key, val in count_dict.items():
             if val in self.var_df.Priority.values:
-                summary_sheet[key] = self.var_df['Priority'].value_counts()[val]
+                summary_sheet[key] = self.var_df[
+                    'Priority'
+                ].value_counts()[val]
             else:
                 summary_sheet[key] = 0
 
@@ -631,13 +631,12 @@ class excel():
         for sv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
-
             for event in sv["reportEvents"]:
                 # Threshold for CNVs is 0.02
                 if event['deNovoQualityScore'] is not None:
                     if event['deNovoQualityScore'] > 0.02:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_cnv_info(sv, 
+                        var_dict = VariantInfo.get_cnv_info(sv,
                                                             event_index,
                                                             self.column_list)
                         var_dict["Priority"] = "De novo"
@@ -707,8 +706,8 @@ class excel():
             None, adds content to openpxyl workbook
         '''
         cnv = self.workbook.create_sheet(f"cnv_interpret_{cnv_sheet_num}")
-        titles ={
-            "Intragenic CNVs should be analysed using the SNV guideline": [1,2],
+        titles = {
+            "Intragenic CNVs should be analysed using SNV guidelines": [1,2], 
             "Chromosomal region/gene": [3, 2],
             "Start": [3, 3],
             "Stop": [3, 4],
@@ -724,20 +723,20 @@ class excel():
             "ACMG/ACGS Classification": [20, 2],
         }
 
-        content ={
-            "Does the CNV contain protein coding genes? How many?": [8,2],
-            "OMIM/green genes?": [9,2],
-            "Any disease genes relevant to phenotype?": [10,2],
-            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12,2],
-            "Does this CNV overlap with a known microdeletion or "\
-            "microduplication syndrome? Check decipher, pubmed, new" \
-            "ACMG CNV guidelines Table S3": [14,2],
-            "Similar CNVs in HGMD, decipher, pubmed listed as pathogenic?"\
-            "Are they de novo? Do they segregate with disease in the reported"\
-            "family?": [16, 2],
-            "Does gene of interest have evidence of HI/TS?": [17,2],
-            "In this case is the CNV de novo, inherited, unknown? Good"\
-            "phenotype fit? Non-segregation in affected family"\
+        content = {
+            "Does the CNV contain protein coding genes? How many?": [8,2], 
+            "OMIM/green genes?": [9,2], 
+            "Any disease genes relevant to phenotype?": [10,2], 
+            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12,2], 
+            "Does this CNV overlap with a known microdeletion or "
+            "microduplication syndrome? Check decipher, pubmed, new " 
+            "ACMG CNV guidelines Table S3": [14,2], 
+            "Similar CNVs in HGMD, decipher, pubmed listed as pathogenic?"
+            "Are they de novo? Do they segregate with disease in the reported"
+            "family?": [16, 2], 
+            "Does gene of interest have evidence of HI/TS?": [17,2], 
+            "In this case is the CNV de novo, inherited, unknown? Good "
+            "phenotype fit? Non-segregation in affected family"
             "members?": [19, 2],
             "1A/3": [7, 7],
             "2G/2F for loss,\n2C-2G for gain": [11, 7],
@@ -788,8 +787,8 @@ class excel():
         # define which rows should have borders
         row_ranges = {
             'horizontal': [
-                'B3:D3', 'B4:F4', 'B6:G6', 'B7:G7', 'B8:G8', 'B9:G9', 'B10:G10',
-                'B11:G11',
+                'B3:D3', 'B4:F4', 'B6:G6', 'B7:G7', 'B8:G8', 'B9:G9',
+                'B10:G10', 'B11:G11',
                 'B12:G12', 'B13:G13', 'B14:G14', 'B15:G15', 'B16:G16',
                 'B17:G17', 'B18:G18', 'B19:G19', 'B20:G20',
             ],

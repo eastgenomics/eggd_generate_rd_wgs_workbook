@@ -9,6 +9,7 @@ from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+
 class TestWorkbook():
     '''
     Tests for excel() class in make_workbook script

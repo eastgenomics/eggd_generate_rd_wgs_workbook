@@ -5,6 +5,7 @@ import argparse
 import os
 from pathlib import Path
 
+
 class SortArgs():
     '''
     Parse command line input/
