@@ -9,6 +9,7 @@ THIN = Side(border_style="thin", color="000000")
 MEDIUM = Side(border_style="medium", color="000001")
 THIN_BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 
+
 class ExcelStyles():
     '''
     Functions to add style to excel workbook
@@ -79,6 +80,7 @@ class ExcelStyles():
         for col in ['W', 'X']:
             sheet.column_dimensions[col].width = 25
 
+
 class DropDown():
     '''
     Handle adding drop down menus to Excel workbook.
@@ -90,7 +92,7 @@ class DropDown():
         drop down into the additional 'Interpreted' column of
         the variant sheet(s).
         Inputs:
-            None   
+            None
         Outputs:
             None, adds content to openpxyl workbook
         """
@@ -107,20 +109,25 @@ class DropDown():
                                   'K25']
             strength_options = '"Very Strong, Strong, Moderate, \
                                  Supporting, NA"'
-            DropDown.get_drop_down(self, dropdown_options=strength_options,
-                               prompt='Select from the list',
-                               title='Strength',
-                               sheet=report_sheet,
-                               cells=cells_for_strength)
+            DropDown.get_drop_down(
+                self,
+                dropdown_options=strength_options,
+                prompt='Select from the list',
+                title='Strength',
+                sheet=report_sheet,
+                cells=cells_for_strength
+            )
 
             # add stregth for BA1
             BA1_options = '"Stand-Alone, Very Strong, Strong, Moderate, \
                             Supporting, NA"'
-            DropDown.get_drop_down(self, dropdown_options=BA1_options,
-                               prompt='Select from the list',
-                               title='Strength',
-                               sheet=report_sheet,
-                               cells=['K9'])
+            DropDown.get_drop_down(
+                self, dropdown_options=BA1_options,
+                prompt='Select from the list',
+                title='Strength',
+                sheet=report_sheet,
+                cells=['K9']
+            )
 
             # adding final classification dropdown
             report_sheet['B26'] = 'FINAL ACMG CLASSIFICATION'
@@ -128,15 +135,18 @@ class DropDown():
             class_options = '"Pathogenic,Likely Pathogenic, \
                               Uncertain Significance, \
                               Likely Benign, Benign"'
-            DropDown.get_drop_down(self, dropdown_options=class_options,
-                               prompt='Select from the list',
-                               title='ACMG classification',
-                               sheet=report_sheet,
-                               cells=['C26'])
+            DropDown.get_drop_down(
+                self,
+                dropdown_options=class_options,
+                prompt='Select from the list',
+                title='ACMG classification',
+                sheet=report_sheet,
+                cells=['C26']
+            )
 
         wb.save(self.args.output)
 
-    def get_drop_down(self, dropdown_options, prompt, title, sheet, cells) -> None:
+    def get_drop_down(self, dropdown_options, prompt, title, sheet, cells):
         """
         create the drop-downs items for designated cells
         Inputs:
@@ -144,7 +154,7 @@ class DropDown():
             prompt: prompt message for drop-down
             title: title message for drop-down
             sheet: openpyxl.Writer writer object current worksheet
-            cells: list of cells to add drop-down  
+            cells: list of cells to add drop-down
         Outputs:
             None, adds content to openpxyl workbook
         """
