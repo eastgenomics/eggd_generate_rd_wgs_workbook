@@ -10,17 +10,26 @@ class VariantInfo():
         Function to add columns to variant pages.
         All columns are empty strings, so they can be overwritten by values if
         needed, but left blank if not.
+        Inputs:
+            column_list (list): a list of column names
+        Outputs:
+            variant_dict (dict): a dictionary with each item in column_list as
+            a key, and an empty string as the value
         '''
         variant_dict = {}
         for col in column_list:
             variant_dict[col] = ""
 
         return variant_dict
-    
+
     @staticmethod
     def get_gene_symbol(variant):
         '''
         Get gene symbol from variant record
+        Inputs:
+            variant (dict): record for that specific variant from the JSON
+        Outputs:
+            gene_symbol (str): the gene symbol for that variant
         '''
         gene_list = []
         for entry in variant['reportEvents'][0]['genomicEntities']:
@@ -32,11 +41,11 @@ class VariantInfo():
         else:
             gene_symbol = str(uniq_genes).strip('[').strip(']')
         return gene_symbol
-    
+
     @staticmethod
     def convert_tier(tier, var_type):
         '''
-        Convert tier to add SNV as CNVs are also Tier 1
+        Convert tier from GEL tiering variant to include variant type.
         Inputs:
             tier (str): described GEL tiering tier for a variant in the JSON
             var_type (str): variant type
@@ -62,9 +71,9 @@ class VariantInfo():
         '''
         Get AF for population with highest allele frequency in the JSON
         Inputs:
-            variant (dict): dict describe a single variant from JSON
+            variant (dict): dict describing a single variant from JSON
         Outputs:
-            highest_af (int): frequency of the variant in the population with
+            highest_af: frequency of the variant in the population with
             the highest allele frequency of the variant, or 0 if the variant
             is not seen in any populations in the JSON
         '''
@@ -81,9 +90,12 @@ class VariantInfo():
         '''
         Work out inheritance of variant based on zygosity of parents
         Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            proband_index: (int) position within list of variant calls that
-            belongs to the proband
+            variant: (dict): dict extracted from JSON describing single variant
+            m_idx: (int): position within list of variant calls that
+            belongs to the mother, or None if no mother in JSON
+            f_idx: (int): position within list of variant calls that
+            belongs to the father, or None if no father in JSON
+            p_sex (str): proband sex
         Outputs:
             inheritance (str): inferred inheritance of the variant, or None.
         '''
@@ -94,7 +106,7 @@ class VariantInfo():
         paternal = False
 
         inheritance_types = ['alternate_homozygous', 'heterozygous']
-        
+
         if m_idx is not None:
             if zygosity(variant, m_idx) in inheritance_types:
                 maternal = True
@@ -124,9 +136,10 @@ class VariantInfo():
         Take list of variantCalls for a variant and return index of the
         participant.
         Inputs:
-            var_calls (list): list of calls of variant
+            variant: (dict): dict extracted from JSON describing single variant
+            participant_id (str): GEL ID for the participant
         Outputs:
-            index (int): index of variantCalls list for the proband
+            index (int): index of variantCalls list in dict for the participant
         '''
         index = None
         if participant_id is not None:
@@ -149,9 +162,9 @@ class VariantInfo():
         '''
         Fill in variant dict for specific STR variant
         Inputs:
-            variant: (dict) dict extracted from JSON describing single variant
-            proband_index: (int) position within list of variant calls that
-            belongs to the proband
+            variant (dict): dict extracted from JSON describing single variant
+            proband (str): GEL ID for the proband
+            columns (list): list of columns to make into keys for variant dict
         Outputs:
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
@@ -229,6 +242,7 @@ class VariantInfo():
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
             ev_index (int): index of reportEvents list for the event
+            columns (list): list of columns to make into keys for variant dict
         Outputs:
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
@@ -254,6 +268,12 @@ class VariantInfo():
         '''
         Get top 3 ranked Exomiser variants; this function uses a podium format
         so that equal ranks can be reported back.
+        Uses gold, silver and bronze to refer to the top, second and third
+        ranked times
+        Inputs
+            ranked (list): list of Exomiser variants
+        Outputs:
+            to_report (list): top three Exomiser variants to report back
         '''
         # TODO: Reconfigure based on analyst feedback
         # Debate between “olympic-style” podium and “boxing-style” podium.
@@ -265,7 +285,7 @@ class VariantInfo():
         rank = lambda x: x['reportEvents']['vendorSpecificScores']['rank']
 
         ordered_list = sorted(ranked, key=rank)
-        
+
         for snv in ordered_list:
             if not gold:
                 gold = [snv]
@@ -274,7 +294,7 @@ class VariantInfo():
                 if rank(snv) == rank(gold[0]):
                     gold.append(snv)
                     continue
-            
+
             if len(gold)>=3:
                 break
 
@@ -285,7 +305,7 @@ class VariantInfo():
                 if rank(snv) == rank(silver[0]):
                     silver.append(snv)
                     continue
-            
+
             if len(gold) + len(silver)>=3:
                 break
 
@@ -347,7 +367,7 @@ class VariantNomenclature():
                 ensp = ensp[0]
                 break
         return ensp
-    
+
     @staticmethod
     def get_hgvs_exomiser(variant, mane, refseq_tsv):
         '''
@@ -358,6 +378,8 @@ class VariantNomenclature():
         ensembl transcript ID if found) and pdot (with ensembl protein ID)
         Inputs:
             variant: (dict) dict describing single variant from JSON
+            mane: MANE file for transcripts
+            refseq: refseq file for transcripts
         Outputs:
             hgvs_c: (str) HGVS c dot (transcript) nomenclature for the variant.
             annotated against refseq transcript ID if one exists, and ensembl
@@ -390,6 +412,8 @@ class VariantNomenclature():
         ensembl transcript ID if found) and pdot (with ensembl protein ID)
         Inputs:
             variant: (dict) dict describing single variant from JSON
+            mane: MANE file for transcripts
+            refseq: refseq file for transcripts
         Outputs:
             hgvs_c: (str) HGVS c dot (transcript) nomenclature for the variant.
             annotated against refseq transcript ID if one exists, and ensembl
@@ -408,7 +432,7 @@ class VariantNomenclature():
             refseq = VariantNomenclature.convert_ensembl_to_refseq(
                 mane, cdna.split('(')[0]
             )
-            
+
             if refseq is not None:
                 ref_list.append(refseq + cdna.split(')')[1])
                 enst_list.append(cdna.split('(')[0])
@@ -429,7 +453,7 @@ class VariantNomenclature():
             for protein in protein_changes:
                 if ensp in protein:
                     hgvs_p = protein
-            
+
         else:
             hgvs_c = list(set(ref_list))[0]
             ensp = VariantNomenclature.get_ensp(refseq_tsv, enst_list[0])

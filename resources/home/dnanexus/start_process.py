@@ -67,7 +67,6 @@ class SortArgs():
         currently uses the DX file ID.
         """
         if not self.args.output:
-            
             self.args.output = Path(
                 self.args.json).name.replace('.json', '')
 

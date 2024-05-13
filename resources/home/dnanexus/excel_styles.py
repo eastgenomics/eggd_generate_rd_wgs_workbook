@@ -20,6 +20,8 @@ class ExcelStyles():
             colour_cells (dict): dict of colour number keys with cells that
             should be that colour as values
             sheet (str): sheet in workbook to add colour to
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         for colour, cells in colour_cells.items():
             for cell in cells:
@@ -34,6 +36,8 @@ class ExcelStyles():
             row_ranges (dict): dict of border type and rows/columns that should
             have that border
             sheet (str): sheet in workbook to add borders to
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         for side, values in row_ranges.items():
             for row in values:
@@ -57,6 +61,8 @@ class ExcelStyles():
         same width
         Inputs:
             sheet: openpxyl sheet on which to resize the columns
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         for col in ['C', 'D', 'M']:
             sheet.column_dimensions[col].width = 14
@@ -83,6 +89,10 @@ class DropDown():
         ACMG criteria for classification, as well as a boolean
         drop down into the additional 'Interpreted' column of
         the variant sheet(s).
+        Inputs:
+            None   
+        Outputs:
+            None, adds content to openpxyl workbook
         """
         wb = load_workbook(filename=self.args.output)
 
@@ -124,38 +134,19 @@ class DropDown():
                                sheet=report_sheet,
                                cells=['C26'])
 
-        # adding Interpreted column dropdown in the first variant sheet tab
-        # first_variant_sheet = wb[self.args.sheets[0]]
-        # interpreted_options = '"YES,NO"'
-        # col_letter = self.get_col_letter(first_variant_sheet, "Interpreted")
-        # num_variant = self.vcfs[0].shape[0]
-        # if num_variant > 0:
-        #     cells_for_variant = []
-        #     for i in range(num_variant):
-        #         cells_for_variant.append(f"{col_letter}{i+2}")
-        #     self.get_drop_down(dropdown_options=interpreted_options,
-        #                        prompt='Choose YES or NO',
-        #                        title='Variant interpreted or not?',
-        #                        sheet=first_variant_sheet,
-        #                        cells=cells_for_variant)
         wb.save(self.args.output)
 
     def get_drop_down(self, dropdown_options, prompt, title, sheet, cells) -> None:
         """
         create the drop-downs items for designated cells
-
-        Parameters
-        ----------
-        dropdown_options: str
-            str containing drop-down items
-        prompt: str
-            prompt message for drop-down
-        title: str
-            title message for drop-down
-        sheet: openpyxl.Writer writer object
-            current worksheet
-        cells: list
-            list of cells to add drop-down
+        Inputs:
+            dropdown_options: str containing drop-down items
+            prompt: prompt message for drop-down
+            title: title message for drop-down
+            sheet: openpyxl.Writer writer object current worksheet
+            cells: list of cells to add drop-down  
+        Outputs:
+            None, adds content to openpxyl workbook
         """
         options = dropdown_options
         val = DataValidation(type='list', formula1=options,

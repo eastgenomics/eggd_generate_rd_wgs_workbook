@@ -119,6 +119,10 @@ class excel():
         '''
         Add summary page. Create a page in the workbook to populate with
         details about the case and variants for interpretation.
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         summary_sheet = self.workbook.create_sheet("Summary")
 
@@ -287,7 +291,7 @@ class excel():
             member (dict): dictionary for that member in the pedigree in the
             GEL JSON
             obo (str): path to obo file
-            index (int): row to populate in the sheet, specific to family
+            index (int): row to populate in the sheet, specific to that family
             member
         Outputs:
             None, adds content to openpxyl workbook
@@ -303,17 +307,25 @@ class excel():
         This function will find the proband and add their affected status, HPO
         term names, participant ID, sample ID to the summary sheet
         It will also do this for any relatives in the JSON
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         # Get version of HPO to use for terms
         obo = self.get_hpo_obo()
         pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
-        for member in self.wgs_data['referral']['referral_data']["pedigree"]["members"]:
+        for member in self.wgs_data['referral']['referral_data']["pedigree"][
+            "members"
+            ]:
             if member["isProband"] == True:
                 self.add_person_data_to_summary(member, 6, obo)
                 self.proband = member["participantId"]
                 self.proband_sex = member["sex"]
-                self.summary_content[(10, 2)] = member["samples"][0]["sampleId"]
+                self.summary_content[(10, 2)] = member["samples"][0][
+                    "sampleId"
+                ]
 
             elif pb_relate(member) == "Mother":
                 self.add_person_data_to_summary(member, 7, obo)
@@ -331,6 +343,10 @@ class excel():
         '''
         Function to get panels from JSON and add to summary content dict to
         then add to summary content sheet
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         panels = []
         for test in self.wgs_data['referral']['referral_data'][
@@ -356,6 +372,10 @@ class excel():
         '''
         Get penetrance info from JSON and add to summary content dict to
         then add to summary content sheet
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         for penetrance in self.wgs_data['referral']['referral_data'][
             'pedigree'
@@ -371,6 +391,10 @@ class excel():
         This function finds the index for each so these can be referred to
         correctly and sets self.gel_index to the index for the GEL tiering and
         self.ex_index to to the index for the Exomiser interpretation.
+        Inputs:
+            None
+        Outputs:
+            None, sets indexs for GEL tiering and exomiser in the JSON.
         '''
         for interpretation in self.wgs_data["interpretedGenomes"]:
             if interpretation['interpretedGenomeData'][
@@ -395,6 +419,10 @@ class excel():
         '''
         STR table is useful for interpretation, so will be included on a sheet
         so it can be referred to during interpretation.
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         str_sheet = self.workbook.create_sheet("STR guidelines")
         script_dir = os.path.dirname(__file__)
@@ -411,19 +439,25 @@ class excel():
 
     def create_gel_tiering_variant_page(self):
         '''
-        Take variants from GEL tiering JSON and format into sheet in Excel workbook.
+        Take variants from GEL tiering JSON and format into sheet in Excel
+        workbook.
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         variant_list = []
 
-        for variant in self.wgs_data["interpretedGenomes"][
+        # SNVs
+        for snv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["variants"]:
 
-            for event in variant["reportEvents"]:                
+            for event in snv["reportEvents"]:                
                 if event["tier"] in ["TIER1", "TIER2"]:
-                    event_index = variant["reportEvents"].index(event)
+                    event_index = snv["reportEvents"].index(event)
                     var_dict = VariantInfo.get_snv_info(
-                        variant,
+                        snv,
                         self.proband,
                         event_index,
                         self.column_list,
@@ -432,7 +466,7 @@ class excel():
                         self.proband_sex
                         )
                     c_dot, p_dot = VariantNomenclature.get_hgvs_gel(
-                        variant,
+                        snv,
                         self.mane,
                         self.refseq_tsv
                         )
@@ -440,39 +474,42 @@ class excel():
                     var_dict["HGVSp"] = p_dot
                     variant_list.append(var_dict)
 
-
-        for str_variant in self.wgs_data["interpretedGenomes"][
+        # STRs
+        for str in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"][
                 "shortTandemRepeats"
             ]:
-            for event in str_variant["reportEvents"]:                
+
+            for event in str["reportEvents"]:                
                 if event["tier"] == "TIER1":
                     var_dict = VariantInfo.get_str_info(
-                        str_variant, self.proband, self.column_list
-                    )
-                    variant_list.append(var_dict)
-        
-        for sv in self.wgs_data["interpretedGenomes"][
-            self.gel_index
-            ]["interpretedGenomeData"]["structuralVariants"]:
-           
-            for event in sv["reportEvents"]:
-                event_index = sv["reportEvents"].index(event)
-                # CNVs can be reported as Tier 1 or Tier A, GEL updated the
-                # nomenclature in 2024
-                if sv["reportEvents"][event_index]["tier"] in [
-                    "TIER1", "TIERA"
-                    ]:
-                    var_dict = VariantInfo.get_cnv_info(
-                        sv, event_index, self.column_list
+                        str, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
 
+        # CNVs
+        for cnv in self.wgs_data["interpretedGenomes"][
+            self.gel_index
+            ]["interpretedGenomeData"]["structuralVariants"]:
+
+            for event in cnv["reportEvents"]:
+                event_index = cnv["reportEvents"].index(event)
+                # CNVs can be reported as Tier 1 or Tier A, GEL updated the
+                # nomenclature in 2024
+                if cnv["reportEvents"][event_index]["tier"] in [
+                    "TIER1", "TIERA"
+                    ]:
+                    var_dict = VariantInfo.get_cnv_info(
+                        cnv, event_index, self.column_list
+                    )
+                    variant_list.append(var_dict)
+
+        # Add all variants into dataframe
         self.var_df = pd.DataFrame(variant_list)
         self.var_df = self.var_df.drop_duplicates()
         self.var_df['Depth'] = self.var_df['Depth'].astype(object)
-        
+
         # if df is not empty
         if not self.var_df.empty:
             # if both Tier 1 and Tier 2, keep Tier 1 entry only
@@ -505,6 +542,10 @@ class excel():
     def create_additional_analysis_page(self):
         '''
         Get Tier3/Null SNVs for Exomiser/deNovo analysis
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         variant_list = []
         ranked = []
@@ -535,7 +576,7 @@ class excel():
                 ranked.append(snv)
 
         to_report = VariantInfo.get_top_3_ranked(ranked)
-        
+
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
             snv['reportEvents'] = [snv['reportEvents']]
@@ -593,7 +634,7 @@ class excel():
                         )
                         variant_list.append(var_dict)
 
-        # For CNVs
+        # CNVs
         for sv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
@@ -611,7 +652,8 @@ class excel():
                         variant_list.append(var_dict)
 
         # TODO
-        # handle STR / SVs which appear to be null in Exomiser (always? sometimes?)
+        # handle STR / SVs which appear to be null in Exomiser
+        # (always? sometimes?)
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
@@ -668,6 +710,8 @@ class excel():
         Write CNV reporting template to sheet(s) in the workbook.
         Inputs:
             cnv_sheet_num (int): number to append to CNV title
+        Outputs:
+            None, adds content to openpxyl workbook
         '''
         cnv = self.workbook.create_sheet(f"cnv_interpret_{cnv_sheet_num}")
         titles ={
@@ -789,7 +833,10 @@ class excel():
         """
         Writes sheet(s) to Excel file with formatting for reporting against
         ACMG criteria
-
+        Inputs:
+            None
+        Outputs:
+            None, adds content to openpxyl workbook
         """
         report = self.workbook.create_sheet(
             f"snv_interpret_{report_sheet_num}"
