@@ -1,5 +1,6 @@
 import re
 
+
 class VariantInfo():
     '''
     Functions to get variant data to be added to the excel spreadsheet
@@ -156,7 +157,6 @@ class VariantInfo():
 
         return index
 
-
     @staticmethod
     def get_str_info(variant, proband, columns):
         '''
@@ -295,7 +295,7 @@ class VariantInfo():
                     gold.append(snv)
                     continue
 
-            if len(gold)>=3:
+            if len(gold) >= 3:
                 break
 
             if not silver:
@@ -306,7 +306,7 @@ class VariantInfo():
                     silver.append(snv)
                     continue
 
-            if len(gold) + len(silver)>=3:
+            if len(gold) + len(silver) >= 3:
                 break
 
             if not bronze:
@@ -322,6 +322,7 @@ class VariantInfo():
         to_report = gold + silver + bronze
 
         return to_report
+
 
 class VariantNomenclature():
     '''
@@ -374,7 +375,7 @@ class VariantNomenclature():
         Exomiser variants have HGVS nomenclature for p dot and c dot provided
         in one field in the JSON in the following format:
         gene_symbol:ensembl_transcript_id:c_dot:p_dot
-        This function extracts the cdot (with MANE refseq equivalent to 
+        This function extracts the cdot (with MANE refseq equivalent to
         ensembl transcript ID if found) and pdot (with ensembl protein ID)
         Inputs:
             variant: (dict) dict describing single variant from JSON
@@ -408,7 +409,7 @@ class VariantNomenclature():
     def get_hgvs_gel(variant, mane, refseq_tsv):
         '''
         GEL variants store HGVS p dot and c dot nomenclature separately.
-        This function extracts the cdot (with MANE refseq equivalent to 
+        This function extracts the cdot (with MANE refseq equivalent to
         ensembl transcript ID if found) and pdot (with ensembl protein ID)
         Inputs:
             variant: (dict) dict describing single variant from JSON
@@ -446,6 +447,8 @@ class VariantNomenclature():
             # transcript ID, remove gene ID in brackets.
             # currently we just use the first one in the list! is there a
             # better way to do this?
+            # TODO: this will considered and corrected with feedback
+            # TODO: provide all of them?
             hgvs_c = re.sub("\(.*?\)", "", cdnas[0])
             ensp = VariantNomenclature.get_ensp(
                 refseq_tsv, cdnas[0].split('(')[0]
@@ -459,6 +462,6 @@ class VariantNomenclature():
             ensp = VariantNomenclature.get_ensp(refseq_tsv, enst_list[0])
             for protein in protein_changes:
                 if ensp in protein:
-                    hgvs_p = protein                
+                    hgvs_p = protein
 
         return hgvs_c, hgvs_p
