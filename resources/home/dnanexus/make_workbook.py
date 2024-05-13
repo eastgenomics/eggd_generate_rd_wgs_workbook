@@ -13,7 +13,6 @@ from pathlib import Path
 import re
 
 from excel_styles import ExcelStyles, DropDown
-from dx_file_manage import DXFile
 from get_variant_info import VariantInfo, VariantNomenclature
 
 DEFAULT_FONT.name = 'Calibri'
@@ -91,15 +90,9 @@ class excel():
         if self.args.cnv:
             for i in range(1, self.args.cnv+1):
                 self.write_cnv_reporting_template(i)
-        
-        # self.workbook.save(self.args.output)
-        # if self.args.acmg and self.args.lock_sheet:
-        #     self.protect_rename_sheets()
-        
         self.workbook.save(self.args.output)
         if self.args.acmg:
             DropDown.drop_down(self)
-
         print('Done!')
 
     def open_files(self):
