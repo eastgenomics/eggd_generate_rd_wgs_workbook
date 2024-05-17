@@ -36,6 +36,7 @@ class excel():
         self.proband_sex = None
         self.mother = None
         self.father = None
+        self.siblings = False
         self.bold_content = None
         self.summary_content = None
         self.mane = None
@@ -168,6 +169,9 @@ class excel():
         self.get_panels()
         self.get_penetrance()
         self.person_data()
+        if self.args.clarity_epic:
+            self.add_epic_data()
+
         # TODO: Method to get SP number/NUH number from Epic via Clarity
         # export and autopopulate summary page with this info.
 
@@ -332,6 +336,7 @@ class excel():
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
                 self.add_person_data_to_summary(member, 9, obo)
+                self.siblings = True
 
     def get_panels(self):
         '''
@@ -378,6 +383,84 @@ class excel():
                 disease_penetrance = penetrance["penetrance"]
 
         self.summary_content[(3, 2)] = disease_penetrance
+
+    def add_epic_data(self):
+        '''
+        Read in data from Epic Clarity extract and add to summary page
+        '''
+        if self.siblings is False:
+            df = pd.read_excel(
+                self.args.epic_clarity,
+                usecols=[
+                    "WGS Referral ID",
+                    "External Specimen Identifier",
+                    "Specimen Identifier",
+                    "Sex",
+                    "YOB"
+                    ]
+            )
+            fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
+                "family_id"
+                ]
+            ]
+            pb_idx = fam_df['YOB'].idxmax()
+            pb_age = fam_df['YOB'].max()
+            pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
+
+            m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
+            f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
+
+            self.summary_content[(6, 3)] = pb_sp
+            self.summary_content[(6, 4)] = pb_nuh
+
+            self.summary_content[(7, 3)] = m_sp
+            self.summary_content[(7, 4)] = m_nuh
+
+            self.summary_content[(8, 3)] = f_sp
+            self.summary_content[(8, 4)] = f_nuh
+        else:
+            print(
+                "Cannot reliably determine family relationships based on age"
+                " and sex due to the presence of family members who are not"
+                " the proband or parent(s)"
+            )
+
+    @staticmethod
+    def get_ids(df, row):
+        '''
+        Get the SP number and NUH ID from a given row in the dataframe
+        Inputs
+            df: pandas dataframe of the family in the Epic clarity export
+            row: row in the df for which to get data
+        Outputs
+            sp_number: Epic sample number
+            nuh_id: External sample ID for NUH samples
+        '''
+        sp_number = df.loc[row, "Specimen Identifier"]
+        nuh_id = df.loc[row, "External Specimen Identifier"]
+        return sp_number, nuh_id
+
+    def get_parent_ids(self, pb_yob, df, sex):
+        '''
+        Get the SP number and NUH ID for the parents, assuming that mother is
+        female and older than the proband, and father is male and older than
+        the proband
+        Inputs
+            df: pandas dataframe of the family in the Epic clarity export
+            pb_yob: year of birth of the proband
+            sex: sex of the parent
+        Outputs:
+            p_sp: Epic sample number for the parent
+            p_nuh: External sample ID for NUH samples for the parent
+        '''
+        parent_df = df[(df['Sex'] == sex) & (df['YOB'] < pb_yob)]
+        if parent_df.empty:
+            p_sp = None
+            p_nuh = None
+        else:
+            p_idx = parent_df.index.tolist()[0]
+            p_sp, p_nuh = self.get_ids(df, p_idx)
+        return p_sp, p_nuh
 
     def index_interpretation_services(self):
         '''
