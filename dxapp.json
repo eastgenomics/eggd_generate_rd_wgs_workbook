@@ -68,6 +68,13 @@
         "class": "file",
         "optional": false,
         "help": ""
+      },
+      {
+        "name": "epic_clarity",
+        "label": "Epic Clarity export; which maps sample IDs to GEL ID",
+        "class": "file",
+        "optional": false,
+        "help": ""
       } 
     ],
     "outputSpec": [

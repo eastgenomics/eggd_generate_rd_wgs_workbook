@@ -655,10 +655,6 @@ class excel():
             col_except_priority.remove('Priority')
             # Merge exomiser df with tiered variants df, indicating if there
             # is a difference between Priority
-            result = self.var_df.dtypes
-            print(result)
-            alt = ex_df.dtypes
-            print(alt)
             ex_df = ex_df.merge(
                 self.var_df,
                 left_on=col_except_priority,

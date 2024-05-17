@@ -132,6 +132,36 @@ class VariantInfo():
         return inheritance
 
     @staticmethod
+    def convert_moi(moi):
+        '''
+        Convert MOI for SNV to use more human readable wording
+        Inputs
+            moi (str): ModeOfInheritance field from GEL JSON
+        Outputs
+            Converted ModeOfInheritance
+        '''
+        conversion = {
+            "biallelic": "Autosomal Recessive",
+            "monoallelic_not_imprinted": "Autosomal Dominant",
+            "monoallelic_paternally_imprinted": "Autosomal Dominant - "
+            "Paternally Imprinted",
+            "monoallelic_maternally_imprinted": "Autosomal Dominant - "
+            "Maternally Imprinted",
+            "xlinked_biallelic": "X-Linked Recessive",
+            "xlinked_monoallelic": "X-Linked Dominant",
+            "mitochondrial": "Mitochondrial"
+        }
+
+        try:
+            c_moi = conversion[moi]
+        except KeyError:
+            c_moi = None
+            print(
+                f"Could not find ModeOfInheritance {moi} in conversion table"
+                f"{conversion}. Setting MOI to None for this variant."
+            )
+
+    @staticmethod
     def index_participant(variant, participant_id):
         '''
         Take list of variantCalls for a variant and return index of the
@@ -224,11 +254,12 @@ class VariantInfo():
         var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
             "penetrance"
         ]
-        # TODO: Convert MOI into more readable names, waiting for analyist
-        # feedback before actioning.
-        var_dict["Inheritance mode"] = variant["reportEvents"][ev_idx][
-            "modeOfInheritance"
-        ]
+        print(
+            variant["reportEvents"][ev_idx]["modeOfInheritance"]
+        )
+        var_dict["Inheritance mode"] = VariantInfo.convert_moi(
+            variant["reportEvents"][ev_idx]["modeOfInheritance"]
+        )
         var_dict["Inheritance"] = (
             VariantInfo.get_inheritance(variant, m_idx, f_idx, pb_sex)
         )
