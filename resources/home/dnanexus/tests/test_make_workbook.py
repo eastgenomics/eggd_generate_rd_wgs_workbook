@@ -14,6 +14,21 @@ class TestWorkbook():
     '''
     Tests for excel() class in make_workbook script
     '''
+    wgs_data = {
+        "referral": {
+            "referral_data": {
+                "pedigree": {
+                    "members": [
+                        {
+                            "hpoTermList": [
+                                {"hpoBuildNumber": "vXXXXXX"}
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
 
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(obo_files=True))
@@ -23,12 +38,6 @@ class TestWorkbook():
         obo file arrays on DNAnexus
         '''
         self.args = mock
-        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
-            'hpoTermList': [
-                {'hpoBuildNumber': "vXXXXXX"}
-            ]
-        }]}}}}
-
         with pytest.raises(RuntimeError):
             excel.get_hpo_obo(self)
 
@@ -41,11 +50,6 @@ class TestWorkbook():
         Test that if the HPO version is invalid a RunTime error is passed for
         obo paths run locally
         '''
-        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
-            'hpoTermList': [
-                {'hpoBuildNumber': "vXXXXXX"}
-            ]
-        }]}}}}
         self.args = mock
         with pytest.raises(RuntimeError):
             excel.get_hpo_obo(self)
@@ -57,13 +61,12 @@ class TestWorkbook():
         Test that the correct path to obo is given based on the version
         specified. This test is for obo_files input from DNAnexus
         '''
-        self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
-            'hpoTermList': [
-                {'hpoBuildNumber': "v2019_02_12"}
-            ]
-        }]}}}}
+        self.wgs_data['referral']['referral_data']['pedigree']['members'][0][
+            'hpoTermList'][0]['hpoBuildNumber'] = "v2019_02_12"
         self.args = mock
-        assert excel.get_hpo_obo(self) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
+        assert excel.get_hpo_obo(
+            self
+        ) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
 
     # TODO: make the following test work
     # @mock.patch('argparse.ArgumentParser.parse_args',
@@ -75,7 +78,8 @@ class TestWorkbook():
     #     Test that the correct path to obo is given based on the version
     #     specified. This test is for obo_path input from the command line
     #     '''
-    #     self.wgs_data = {'referral': {'referral_data': {'pedigree': {'members': [{
+    #     self.wgs_data = {'referral': {'referral_data': {'pedigree':
+    #     {'members': [{
     #         'hpoTermList': [
     #             {'hpoBuildNumber': "v2019_02_12"}
     #         ]
@@ -166,7 +170,9 @@ class TestVariantInfo():
         empty strings as the values.
         '''
         column_list = ["ColA", "ColB"]
-        assert VariantInfo.add_columns_to_dict(column_list) == {"ColA": '', "ColB": ''}
+        assert VariantInfo.add_columns_to_dict(
+            column_list
+        ) == {"ColA": '', "ColB": ''}
 
     def test_tier_conversion(self):
         '''
