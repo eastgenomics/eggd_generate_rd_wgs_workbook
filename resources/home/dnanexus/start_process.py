@@ -26,7 +26,7 @@ class SortArgs():
             )
         )
         parser.add_argument(
-            '-o', '--output', required=False,
+            '-o', '--output_name_prefix', required=False,
             help=(
                 'output name prefix for file, if not set will use json input'
             )
@@ -67,11 +67,11 @@ class SortArgs():
         file. Note for DNAnexus files this will be overwritten later as it
         currently uses the DX file ID.
         """
-        if not self.args.output:
-            self.args.output = Path(
+        if not self.args.output_name_prefix:
+            self.args.output_name_prefix = Path(
                 self.args.json).name.replace('.json', '')
 
-        self.args.output = (
+        self.args.output_name_prefix = (
             f"{Path(self.args.out_dir)}/{self.args.output}.xlsx"
         )
 

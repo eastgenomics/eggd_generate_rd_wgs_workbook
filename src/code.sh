@@ -14,7 +14,7 @@ main() {
     args=""
     if [ "$acmg" ]; then args+="--acmg ${acmg} "; fi
     if [ "$cnv" ]; then args+="--cnv ${cnv} "; fi
-    if [ "$output" ]; then args+="--output ${output} "; fi
+    if [ "$output_name_prefix" ]; then args+="--output ${output} "; fi
     if [ "$out_dir" ]; then args+="--out_dir ${out_dir} "; fi
     if [ "$acmg" ]; then args+="--acmg ${acmg} "; fi
     if [ "$obo_path" ]; then args+="--obo_path ${obo_path} "; fi
