@@ -10,7 +10,7 @@
         "name": "json",
         "label": "GEL JSON for WGS rare disease",
         "class": "file",
-        "optional": true,
+        "optional": false,
         "help": ""
       },
       {
@@ -42,7 +42,7 @@
         "help": ""
       },
       {
-        "name": "mane",
+        "name": "mane_file",
         "label": "MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs",
         "class": "file",
         "optional": false,

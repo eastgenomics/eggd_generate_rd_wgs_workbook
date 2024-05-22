@@ -44,7 +44,7 @@ class SortArgs():
             help='add CNV reporting template sheet(s)'
         )
         parser.add_argument(
-            '--mane',
+            '--mane_file',
             help='MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs'
         )
         parser.add_argument(

@@ -103,7 +103,7 @@ class excel():
         with open(self.args.json) as f:
             self.wgs_data = json.load(f)
 
-        with gzip.open(self.args.mane) as f:
+        with gzip.open(self.args.mane_file) as f:
             self.mane = [x.decode('utf8').strip() for x in f.readlines()]
 
         with open(self.args.refseq_tsv) as refseq_tsv:
