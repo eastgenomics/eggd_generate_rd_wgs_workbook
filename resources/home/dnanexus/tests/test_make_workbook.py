@@ -49,7 +49,7 @@ class TestWorkbook():
         self.args = mock
         with pytest.raises(RuntimeError):
             excel.get_hpo_obo(self)
-    
+
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(obo_path=None, obo_files=True))
     def test_correct_hpo_version_dx(self, mock):
@@ -65,6 +65,7 @@ class TestWorkbook():
         self.args = mock
         assert excel.get_hpo_obo(self) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
 
+    # TODO: make the following test work
     # @mock.patch('argparse.ArgumentParser.parse_args',
     #         return_value=argparse.Namespace(
     #             obo_path='/path/to/wherever/', obo_files=None
@@ -81,7 +82,7 @@ class TestWorkbook():
     #     }]}}}}
     #     self.args = mock
     #     assert excel.get_hpo_obo(self) == "/path/to/wherever/hpo_v20190212.obo"
-    
+
     def test_get_panels(self):
         '''
         Check that panels are extracted from JSON as expected.
@@ -99,7 +100,7 @@ class TestWorkbook():
         assert self.summary_content == {
             (14, 1): '486', (14, 2): 'Disease', (14, 3): '2.2', (14, 4): '286'
         }
-    
+
     def test_get_penetrance(self):
         '''
         Check that penetrance is extracted from JSON as expected, and matched
@@ -118,13 +119,6 @@ class TestWorkbook():
                 ]}}}}
         excel.get_penetrance(self)
         assert self.summary_content[(3,2)] == "complete"
-
-    # def test_person_data(self):
-    #     self.wgs_data = {'referral': {'referral_data': {'pedigree':
-    #         {'members':
-    #          {
-    #              "isProband": 'True'
-    #          }
 
 
 class TestInterpretationService():
@@ -191,11 +185,11 @@ class TestVariantInfo():
         tiers = []
         for tiering in tiers_to_convert:
             tiers.append(VariantInfo.convert_tier(tiering[0], tiering[1]))
-        
+
         assert tiers == [
             "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
         ]
-    
+
     def test_get_af_max(self):
         '''
         Test that the highest AF is returned for the variant.
@@ -246,7 +240,7 @@ class TestIndexParticipant():
 
         with pytest.raises(RuntimeError):
             VariantInfo.index_participant(self.variant, self.proband)
-    
+
     def test_returns_none_if_no_idx_provided(self):
         '''
         Check if index is None (i.e. there is no mother and/or father) None
@@ -267,6 +261,7 @@ class TestRanking():
         {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
         {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
     ]
+
     def test_can_handle_two_bronze(self):
         '''
         Check both third ranked items are returned.
@@ -277,6 +272,7 @@ class TestRanking():
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         ]
+
     def test_can_handle_two_silvers(self):
         '''
         Check no third ranked item is returned if there are two second ranked

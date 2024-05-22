@@ -2,15 +2,15 @@
 set -exo pipefail
 
 main() {
-    #mark-section "Setting up and downloading inputs"
+    # Set up and download inputs
     mkdir -p /home/dnanexus/out/xlsx_reports
     dx-download-all-inputs --parallel
-    # add pip install location to path
+    # Add pip install location to path
     export PATH=$PATH:/home/dnanexus/.local/bin
-    # install packages
+    # Install packages
     sudo -H python3 -m pip install --no-index --no-deps packages/*
 
-    #mark-section "Building arguments"
+    # Build arguments
     args=""
     if [ "$acmg" ]; then args+="--acmg ${acmg} "; fi
     if [ "$cnv" ]; then args+="--cnv ${cnv} "; fi
@@ -27,11 +27,11 @@ main() {
     # Download obo files into single folder
     if [ "$obo_files" ]; then find ~/in/obo_files -type f -name "*" -print0 | xargs -0 -I {} mv {} ~/obo_files; fi
 
-    #mark-section "Generating workbook"
+    # Generate workbook
     /usr/bin/time -v python3 start_process.py \
     --json /home/dnanexus/in/json/*json --mane_file /home/dnanexus/in/mane/* --refseq_tsv /home/dnanexus/in/refseq_tsv/*tsv $args
     mv *.xlsx /home/dnanexus/out/xlsx_reports
-    #mark-section "Uploading workbook"
+    # Upload workbook
     output_xlsx=$(dx upload /home/dnanexus/out/xlsx_reports/* --brief)
     dx-jobutil-add-output xlsx_report "$output_xlsx" --class=file
 }
