@@ -160,6 +160,7 @@ class VariantInfo():
                 f"Could not find ModeOfInheritance {moi} in conversion table"
                 f"{conversion}. Setting MOI to None for this variant."
             )
+        return c_moi
 
     @staticmethod
     def index_participant(variant, participant_id):
