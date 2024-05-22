@@ -726,10 +726,6 @@ class excel():
                         var_dict["Inheritance"] = "De novo"
                         variant_list.append(var_dict)
 
-        # TODO
-        # handle STR / SVs which appear to be null in Exomiser
-        # (always? sometimes?)
-
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
         if not ex_df.empty:
