@@ -36,9 +36,9 @@ class VariantInfo():
         for entry in variant['reportEvents'][0]['genomicEntities']:
             if entry['type'] == 'gene':
                 gene_list.append(entry['geneSymbol'])
-        uniq_genes = list(set(gene_list))
+        uniq_genes = sorted(list(set(gene_list)))
         if len(uniq_genes) == 1:
-            gene_symbol = uniq_genes[0]
+            gene_symbol = uniq_genes.pop()
         else:
             gene_symbol = str(uniq_genes).strip('[').strip(']')
         return gene_symbol
