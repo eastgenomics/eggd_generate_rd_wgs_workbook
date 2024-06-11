@@ -14,15 +14,8 @@
         "help": ""
       },
       {
-        "name": "output_name_prefix",
+        "name": "output_filename",
         "label": "output name prefix for file, if not set will use json input",
-        "class": "string",
-        "optional": true,
-        "help": ""
-      },
-      {
-        "name": "out_dir",
-        "label": "path to output directory",
         "class": "string",
         "optional": true,
         "help": ""
@@ -50,17 +43,11 @@
         "help": ""
       },
       {
-        "name": "obo_path",
-        "label": "path to obo files",
-        "class": "string",
-        "optional": true,
-        "help": ""
-      },
-      {
-        "name": "obo_files",
-        "label": "obo files",
-        "class": "array:file",
-        "optional": true,
+        "name": "config",
+        "label": "config",
+        "class": "file",
+        "patterns": ["*.json"],
+        "optional": false,
         "help": ""
       },
       {

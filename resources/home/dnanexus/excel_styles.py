@@ -96,7 +96,7 @@ class DropDown():
         Outputs:
             None, adds content to openpxyl workbook
         """
-        wb = load_workbook(filename=self.args.output)
+        wb = load_workbook(filename=self.args.output_filename)
 
         # adding dropdowns in report table
         for sheet_num in range(1, self.args.acmg+1):
@@ -144,7 +144,7 @@ class DropDown():
                 cells=['C26']
             )
 
-        wb.save(self.args.output)
+        wb.save(self.args.output_filename)
 
     def get_drop_down(self, dropdown_options, prompt, title, sheet, cells):
         """

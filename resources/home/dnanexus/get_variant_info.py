@@ -46,7 +46,9 @@ class VariantInfo():
     @staticmethod
     def convert_tier(tier, var_type):
         '''
-        Convert tier from GEL tiering variant to include variant type.
+        Convert tier from GEL tiering variant to include variant type. This is
+        to facilitate counting the total variants of each tier and type, as
+        well as to convert tier "A" to "1" for consistency.
         Inputs:
             tier (str): described GEL tiering tier for a variant in the JSON
             var_type (str): variant type
@@ -75,7 +77,7 @@ class VariantInfo():
             variant (dict): dict describing a single variant from JSON
         Outputs:
             highest_af: frequency of the variant in the population with
-            the highest allele frequency of the variant, or 0 if the variant
+            the highest allele frequency for the variant, or 0 if the variant
             is not seen in any populations in the JSON
         '''
         highest_af = 0
@@ -87,14 +89,14 @@ class VariantInfo():
         return highest_af
 
     @staticmethod
-    def get_inheritance(variant, m_idx, f_idx, p_sex):
+    def get_inheritance(variant, mother_idx, father_idx, p_sex):
         '''
         Work out inheritance of variant based on zygosity of parents
         Inputs:
             variant: (dict): dict extracted from JSON describing single variant
-            m_idx: (int): position within list of variant calls that
+            mother_idx: (int): position within list of variant calls that
             belongs to the mother, or None if no mother in JSON
-            f_idx: (int): position within list of variant calls that
+            father_idx: (int): position within list of variant calls that
             belongs to the father, or None if no father in JSON
             p_sex (str): proband sex
         Outputs:
@@ -103,30 +105,35 @@ class VariantInfo():
         zygosity = lambda x, y: x['variantCalls'][y]['zygosity']
 
         inheritance = None
-        maternal = False
-        paternal = False
+        maternally_inherited = False
+        paternally_inherited = False
 
         inheritance_types = ['alternate_homozygous', 'heterozygous']
+        
+        # if there is a mother in the JSON and the variant is alt_homozygous in
+        # or heterozygous in the mother then can infer maternal inheritance
+        if mother_idx is not None:
+            if zygosity(variant, mother_idx) in inheritance_types:
+                maternally_inherited = True
 
-        if m_idx is not None:
-            if zygosity(variant, m_idx) in inheritance_types:
-                maternal = True
-
-        if f_idx is not None:
-            if zygosity(variant, f_idx) in inheritance_types:
+        # if there is a father in the JSON and the variant is alt_homozygous in
+        # or heterozygous in the father then can infer paternal inheritance
+        # filter out XY probands here as X should be inherited from mother
+        if father_idx is not None:
+            if zygosity(variant, father_idx) in inheritance_types:
                 if (p_sex == 'MALE' and
                 variant['variantCoordinates']['chromosome'] == 'X'):
-                    paternal = False
+                    paternally_inherited = False
                 else:
-                    paternal = True
+                    paternally_inherited = True
 
-        if maternal is True and paternal is False:
+        if maternally_inherited and not paternally_inherited:
             inheritance = "maternal"
 
-        elif maternal is False and paternal is True:
+        elif paternally_inherited and not maternally_inherited:
             inheritance = "paternal"
 
-        elif maternal is True and paternal is True:
+        elif maternally_inherited and paternally_inherited:
             inheritance = "both"
 
         return inheritance
@@ -160,14 +167,21 @@ class VariantInfo():
     @staticmethod
     def get_str_info(variant, proband, columns):
         '''
-        Fill in variant dict for specific STR variant
+        Each variant that will be added to the excel workbook, needs to be
+        added to the dataframe via a dictionary of values for each column
+        heading in the workbook
+    
+        This function creates a variant dict for specific STR variant to be
+        added to the excel workbook, where the keys are the columns in the
+        workbook and the values are the values for this variant.
         Inputs:
             variant (dict): dict extracted from JSON describing single variant
             proband (str): GEL ID for the proband
             columns (list): list of columns to make into keys for variant dict
         Outputs:
-            var_dict: (dict) dict of variant information extracted from JSON
-            will be added to a list of dicts for conversion into dataframe.
+            var_dict: (dict) dict of variant information extracted from JSON,
+            formatted with the correct column headings for the excel workbook.
+            this will be added to a list of dicts for conversion into dataframe
         '''
         num_copies = lambda x, y, z: x['variantCalls'][y]['numberOfCopies'][
             z
@@ -206,8 +220,8 @@ class VariantInfo():
             will be added to a list of dicts for conversion into dataframe.
         '''
         var_dict = VariantInfo.add_columns_to_dict(columns)
-        m_idx = VariantInfo.index_participant(variant, mother)
-        f_idx = VariantInfo.index_participant(variant, father)
+        mother_idx = VariantInfo.index_participant(variant, mother)
+        father_idx = VariantInfo.index_participant(variant, father)
         pb_idx = VariantInfo.index_participant(variant, pb)
         var_dict["Chr"] = variant["variantCoordinates"]["chromosome"]
         var_dict["Pos"] = variant["variantCoordinates"]["position"]
@@ -230,7 +244,7 @@ class VariantInfo():
             "modeOfInheritance"
         ]
         var_dict["Inheritance"] = (
-            VariantInfo.get_inheritance(variant, m_idx, f_idx, pb_sex)
+            VariantInfo.get_inheritance(variant, mother_idx, father_idx, pb_sex)
         )
         return var_dict
 
@@ -329,7 +343,7 @@ class VariantNomenclature():
     Functions for manipulating variant nomenclature.
     '''
     @staticmethod
-    def convert_ensembl_to_refseq(mane, ensembl):
+    def convert_ensembl_to_refseq_mane(mane, ensembl):
         '''
         Search MANE file for query ensembl transcript ID. If match found,
         output the equivalent refseq ID, else output None
@@ -393,7 +407,7 @@ class VariantNomenclature():
         hgvs_source = variant['variantAttributes'][
             'additionalTextualVariantAnnotations'
             ]['hgvs']
-        refseq = VariantNomenclature.convert_ensembl_to_refseq(
+        refseq = VariantNomenclature.convert_ensembl_to_refseq_mane(
             mane, hgvs_source.split(':')[1]
         )
         if refseq is not None:
@@ -430,7 +444,7 @@ class VariantNomenclature():
         protein_changes = variant['variantAttributes']['proteinChanges']
 
         for cdna in cdnas:
-            refseq = VariantNomenclature.convert_ensembl_to_refseq(
+            refseq = VariantNomenclature.convert_ensembl_to_refseq_mane(
                 mane, cdna.split('(')[0]
             )
 

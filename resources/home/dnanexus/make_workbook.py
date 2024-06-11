@@ -9,8 +9,10 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import Alignment, DEFAULT_FONT, Font
 import os
+from os import path
 from pathlib import Path
 import re
+import dxpy
 
 from excel_styles import ExcelStyles, DropDown
 from get_variant_info import VariantInfo, VariantNomenclature
@@ -40,6 +42,7 @@ class excel():
         self.summary_content = None
         self.mane = None
         self.refseq_tsv = None
+        self.config = None
         self.gel_index = None
         self.ex_index = None
         self.var_df = None
@@ -75,9 +78,11 @@ class excel():
         """
         # Initiate files and workbook to write in
         self.open_files()
-        self.writer = pd.ExcelWriter(self.args.output, engine='openpyxl')
+        self.writer = pd.ExcelWriter(
+            self.args.output_filename, engine='openpyxl'
+        )
         self.workbook = self.writer.book
-        print(f"Writing to {self.args.output}...")
+        print(f"Writing to {self.args.output_filename}...")
         # Write in workbook
         self.summary_page()
         self.index_interpretation_services()
@@ -91,7 +96,7 @@ class excel():
         if self.args.cnv:
             for i in range(1, self.args.cnv+1):
                 self.write_cnv_reporting_template(i)
-        self.workbook.save(self.args.output)
+        self.workbook.save(self.args.output_filename)
         if self.args.acmg:
             DropDown.drop_down(self)
         print('Done!')
@@ -108,6 +113,9 @@ class excel():
 
         with open(self.args.refseq_tsv) as refseq_tsv:
             self.refseq_tsv = refseq_tsv.readlines()
+
+        with open(self.args.config) as fh:
+            self.config = json.load(fh)
 
     def summary_page(self):
         '''
@@ -211,43 +219,28 @@ class excel():
             obo (str): Path to HPO obo file for the version of HPO used in the
             JSON
         '''
+        # Get HPO version from JSON
+        obo = None
         version = self.wgs_data['referral']['referral_data']["pedigree"][
             "members"
             ][0]["hpoTermList"][0]['hpoBuildNumber']
 
-        if self.args.obo_files:
-            if version == "v2019_02_12":
-                obo = "/home/dnanexus/obo_files/hpo_v20190212.obo"
-            elif version == "releases/2018-10-09":
-                obo = "/home/dnanexus/obo_files/hpo_v20181009.obo"
-            else:
-                raise RuntimeError(
-                    f"GEL version of HPO ontology {version} does not match "
-                    "provided obo file(s)"
-                )
+        # Find dx file ID in config for obo file for that version of HPO
+        for k, v in self.config['obos'].items():
+            if k == version:
+                obo = v
 
-        elif self.args.obo_path:
-            if self.args.obo_path.endswith('/'):
-                self.args.obo_path = self.args.obo_path[:-1]
-
-            if version == "v2019_02_12":
-                obo = f"{self.args.obo_path}/hpo_v20190212.obo"
-            elif version == "releases/2018-10-09":
-                obo = f"{self.args.obo_path}/hpo_v20181009.obo"
-            else:
-                raise RuntimeError(
-                    f"GEL version of HPO ontology {version} does not match "
-                    "provided obo file(s)"
-                )
-        else:
+        # If no match found error, else download the HPO obo + call it hpo.obo
+        if obo is None:
             raise RuntimeError(
-                "Neither obo_path or obo_files input provided. Process "
-                "requires HPO obo files to complete."
+                f"HPO version in JSON {version} not found in config\n"
+                f"{self.config}"
             )
+        else:
+            dxpy.download_dxfile(obo, "hpo.obo")
 
-        return obo
 
-    def get_hpo_terms(self, member, obo):
+    def get_hpo_terms(self, member):
         '''
         Use obo hpo term ontology (.obo) file to convert HPO IDs to names
         Inputs:
@@ -260,7 +253,7 @@ class excel():
         hpo_terms = []
         hpo_names = []
         if member["hpoTermList"]:
-            graph = obonet.read_obo(obo)
+            graph = obonet.read_obo("hpo.obo")
             # Read in HPO IDs from JSON
             for i in member["hpoTermList"]:
                 hpo_terms.append(i["term"])
@@ -277,7 +270,7 @@ class excel():
 
         return hpo_names
 
-    def add_person_data_to_summary(self, member, index, obo):
+    def add_person_data_to_summary(self, member, index):
         '''
         Function to add data that is added for all family members to the
         summary sheet. Isolated here as it is the same for all family members
@@ -293,7 +286,7 @@ class excel():
         self.summary_content[(index, 2)] = member["participantId"]
         self.summary_content[(index, 5)] = member["sex"]
         self.summary_content[(index, 6)] = member["affectionStatus"]
-        self.summary_content[(index, 7)] = self.get_hpo_terms(member, obo)
+        self.summary_content[(index, 7)] = self.get_hpo_terms(member)
 
     def person_data(self):
         '''
@@ -307,14 +300,14 @@ class excel():
             None, adds content to openpxyl workbook
         '''
         # Get version of HPO to use for terms
-        obo = self.get_hpo_obo()
+        self.get_hpo_obo()
         pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
         for member in self.wgs_data['referral']['referral_data']["pedigree"][
             "members"
             ]:
             if member["isProband"]:
-                self.add_person_data_to_summary(member, 6, obo)
+                self.add_person_data_to_summary(member, 6)
                 self.proband = member["participantId"]
                 self.proband_sex = member["sex"]
                 self.summary_content[(10, 2)] = member["samples"][0][
@@ -322,16 +315,16 @@ class excel():
                 ]
 
             elif pb_relate(member) == "Mother":
-                self.add_person_data_to_summary(member, 7, obo)
+                self.add_person_data_to_summary(member, 7)
                 self.mother = member["participantId"]
 
             elif pb_relate(member) == "Father":
-                self.add_person_data_to_summary(member, 8, obo)
+                self.add_person_data_to_summary(member, 8)
                 self.father = member["participantId"]
 
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
-                self.add_person_data_to_summary(member, 9, obo)
+                self.add_person_data_to_summary(member, 9)
 
     def get_panels(self):
         '''
@@ -468,15 +461,15 @@ class excel():
                     variant_list.append(var_dict)
 
         # STRs
-        for str in self.wgs_data["interpretedGenomes"][
+        for s_t_r in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"][
                 "shortTandemRepeats"
             ]:
-            for event in str["reportEvents"]:
+            for event in s_t_r["reportEvents"]:
                 if event["tier"] == "TIER1":
                     var_dict = VariantInfo.get_str_info(
-                        str, self.proband, self.column_list
+                        s_t_r, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
 
