@@ -596,8 +596,11 @@ class excel():
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
                 if event['deNovoQualityScore'] is not None:
-                    # Threshold for SNVs is 0.0013
-                    if event['deNovoQualityScore'] > 0.0013:
+                    # Use threshold for SNVs from config
+                    if (
+                        event['deNovoQualityScore'] >
+                        self.config['denovo_quality_scores']['snv']
+                        ):
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantUtils.get_snv_info(
                             snv,
@@ -625,7 +628,10 @@ class excel():
             for event in sv["reportEvents"]:
                 # Threshold for CNVs is 0.02
                 if event['deNovoQualityScore'] is not None:
-                    if event['deNovoQualityScore'] > 0.02:
+                    if (
+                        event['deNovoQualityScore'] >
+                        self.config['denovo_quality_scores']['snv']
+                        ):
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantUtils.get_cnv_info(sv,
                                                             event_index,
