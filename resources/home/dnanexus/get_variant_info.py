@@ -1,7 +1,7 @@
 import re
 
 
-class VariantInfo():
+class VariantUtils():
     '''
     Functions to get variant data to be added to the excel spreadsheet
     '''
@@ -26,7 +26,8 @@ class VariantInfo():
     @staticmethod
     def get_gene_symbol(variant):
         '''
-        Get gene symbol from variant record
+        Get gene symbol from variant record. Some records will have more than
+        one gene symbol; in those cases, all gene symbols will be returned.
         Inputs:
             variant (dict): record for that specific variant from the JSON
         Outputs:
@@ -170,7 +171,7 @@ class VariantInfo():
         Each variant that will be added to the excel workbook, needs to be
         added to the dataframe via a dictionary of values for each column
         heading in the workbook
-    
+
         This function creates a variant dict for specific STR variant to be
         added to the excel workbook, where the keys are the columns in the
         workbook and the values are the values for this variant.
@@ -187,8 +188,8 @@ class VariantInfo():
             z
             ]['numberOfCopies']
 
-        var_dict = VariantInfo.add_columns_to_dict(columns)
-        pb_idx = VariantInfo.index_participant(variant, proband)
+        var_dict = VariantUtils.add_columns_to_dict(columns)
+        pb_idx = VariantUtils.index_participant(variant, proband)
         var_dict["Chr"] = variant["coordinates"]["chromosome"]
         var_dict["Pos"] = variant["coordinates"]["start"]
         var_dict["End"] = variant["coordinates"]["end"]
@@ -200,13 +201,20 @@ class VariantInfo():
         ]["repeatedSequence"]
         var_dict["STR1"] = num_copies(variant, pb_idx, 0)
         var_dict["STR2"] = num_copies(variant, pb_idx, 1)
-        var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
+        var_dict["Gene"] = VariantUtils.get_gene_symbol(variant)
         return var_dict
 
     @staticmethod
     def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
         '''
-        Fill in variant dict for specific SNV
+        Each variant that will be added to the excel workbook, needs to be
+        added to the dataframe via a dictionary of values for each column
+        heading in the workbook
+
+        This function creates a variant dict for specific SNV to be added to
+        the excel workbook, where the keys are the columns in the workbook and
+        the values are the values for this variant.
+
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
             pb (str): participant ID of proband
@@ -219,22 +227,22 @@ class VariantInfo():
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
         '''
-        var_dict = VariantInfo.add_columns_to_dict(columns)
-        mother_idx = VariantInfo.index_participant(variant, mother)
-        father_idx = VariantInfo.index_participant(variant, father)
-        pb_idx = VariantInfo.index_participant(variant, pb)
+        var_dict = VariantUtils.add_columns_to_dict(columns)
+        mother_idx = VariantUtils.index_participant(variant, mother)
+        father_idx = VariantUtils.index_participant(variant, father)
+        pb_idx = VariantUtils.index_participant(variant, pb)
         var_dict["Chr"] = variant["variantCoordinates"]["chromosome"]
         var_dict["Pos"] = variant["variantCoordinates"]["position"]
         var_dict["Ref"] = variant["variantCoordinates"]["reference"]
         var_dict["Alt"] = variant["variantCoordinates"]["alternate"]
         var_dict["Type"] = "SNV"
-        var_dict["Priority"] = VariantInfo.convert_tier(
+        var_dict["Priority"] = VariantUtils.convert_tier(
             variant["reportEvents"][ev_idx]["tier"], "SNV"
         )
         var_dict["Zygosity"] = variant["variantCalls"][pb_idx]["zygosity"]
         var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
-        var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
-        var_dict['AF Max'] = VariantInfo.get_af_max(variant)
+        var_dict["Gene"] = VariantUtils.get_gene_symbol(variant)
+        var_dict['AF Max'] = VariantUtils.get_af_max(variant)
         var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
             "penetrance"
         ]
@@ -244,15 +252,20 @@ class VariantInfo():
             "modeOfInheritance"
         ]
         var_dict["Inheritance"] = (
-            VariantInfo.get_inheritance(variant, mother_idx, father_idx, pb_sex)
+            VariantUtils.get_inheritance(variant, mother_idx, father_idx, pb_sex)
         )
         return var_dict
 
     @staticmethod
     def get_cnv_info(variant, ev_index, columns):
         '''
-        Extract CNV info from JSON and create variant dict of required data for
-        workbook
+        Each variant that will be added to the excel workbook, needs to be
+        added to the dataframe via a dictionary of values for each column
+        heading in the workbook
+
+        This function creates a variant dict for specific CNV to be added to
+        the excel workbook, where the keys are the columns in the workbook and
+        the values are the values for this varian
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
             ev_index (int): index of reportEvents list for the event
@@ -261,20 +274,20 @@ class VariantInfo():
             var_dict: (dict) dict of variant information extracted from JSON
             will be added to a list of dicts for conversion into dataframe.
         '''
-        var_dict = VariantInfo.add_columns_to_dict(columns)
+        var_dict = VariantUtils.add_columns_to_dict(columns)
         var_dict["Chr"] = variant["coordinates"]["chromosome"]
         var_dict["Pos"] = variant["coordinates"]["start"]
         var_dict["End"] = variant["coordinates"]["end"]
         var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
         var_dict["Type"] = "CNV"
-        var_dict["Priority"] = VariantInfo.convert_tier(
+        var_dict["Priority"] = VariantUtils.convert_tier(
             variant["reportEvents"][ev_index]["tier"], "CNV"
         )
         var_dict["Copy Number"] = variant["variantCalls"][
             0
             ]['numberOfCopies'][0]['numberOfCopies']
-        var_dict["Gene"] = VariantInfo.get_gene_symbol(variant)
-        var_dict['AF Max'] = VariantInfo.get_af_max(variant)
+        var_dict["Gene"] = VariantUtils.get_gene_symbol(variant)
+        var_dict['AF Max'] = VariantUtils.get_af_max(variant)
         return var_dict
 
     @staticmethod

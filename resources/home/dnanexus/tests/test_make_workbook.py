@@ -4,7 +4,7 @@ import pytest
 import os
 import sys
 from make_workbook import excel
-from get_variant_info import VariantNomenclature, VariantInfo
+from get_variant_info import VariantNomenclature, VariantUtils
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -170,7 +170,7 @@ class TestVariantInfo():
         empty strings as the values.
         '''
         column_list = ["ColA", "ColB"]
-        assert VariantInfo.add_columns_to_dict(
+        assert VariantUtils.add_columns_to_dict(
             column_list
         ) == {"ColA": '', "ColB": ''}
 
@@ -190,7 +190,7 @@ class TestVariantInfo():
 
         tiers = []
         for tiering in tiers_to_convert:
-            tiers.append(VariantInfo.convert_tier(tiering[0], tiering[1]))
+            tiers.append(VariantUtils.convert_tier(tiering[0], tiering[1]))
 
         assert tiers == [
             "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
@@ -211,7 +211,7 @@ class TestVariantInfo():
                 }
             ]
         }}
-        assert VariantInfo.get_af_max(variant) == 0.001
+        assert VariantUtils.get_af_max(variant) == 0.001
 
 
 class TestIndexParticipant():
@@ -236,7 +236,7 @@ class TestIndexParticipant():
         Check indexing of proband is worked out correctly; here the proband is
         the second in the list, so we expect index 1 to be returned.
         '''
-        assert VariantInfo.index_participant(self.variant, self.proband) == 1
+        assert VariantUtils.index_participant(self.variant, self.proband) == 1
 
     def test_index_if_proband_not_found(self):
         '''
@@ -245,14 +245,14 @@ class TestIndexParticipant():
         self.variant['variantCalls'].pop(1)
 
         with pytest.raises(RuntimeError):
-            VariantInfo.index_participant(self.variant, self.proband)
+            VariantUtils.index_participant(self.variant, self.proband)
 
     def test_returns_none_if_no_idx_provided(self):
         '''
         Check if index is None (i.e. there is no mother and/or father) None
         is returned.
         '''
-        assert VariantInfo.index_participant(self.variant, None) is None
+        assert VariantUtils.index_participant(self.variant, None) is None
 
 
 class TestRanking():
@@ -272,7 +272,7 @@ class TestRanking():
         '''
         Check both third ranked items are returned.
         '''
-        assert VariantInfo.get_top_3_ranked(self.snvs) == [
+        assert VariantUtils.get_top_3_ranked(self.snvs) == [
             {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
@@ -285,7 +285,7 @@ class TestRanking():
         items
         '''
         self.snvs[2] = {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
-        assert VariantInfo.get_top_3_ranked(self.snvs) == [
+        assert VariantUtils.get_top_3_ranked(self.snvs) == [
             {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}

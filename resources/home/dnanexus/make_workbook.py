@@ -15,7 +15,7 @@ import re
 import dxpy
 
 from excel_styles import ExcelStyles, DropDown
-from get_variant_info import VariantInfo, VariantNomenclature
+from get_variant_info import VariantUtils, VariantNomenclature
 
 DEFAULT_FONT.name = 'Calibri'
 # row and col counts that are to be unlocked next to
@@ -209,14 +209,12 @@ class excel():
 
     def get_hpo_obo(self):
         '''
-        Select which version of HPO to use based on which version was used by
-        GEL when the JSON was made.
-        Works with input obo_files (DNAnexus array of obo files) and input
-        obo_path (local path to directory containing obo files)
+        Select which version of HPO from the input config to use based on
+        which version was used by GEL when the JSON was made.
         Inputs:
             version (str): version of HPO used in JSON
         Outputs:
-            obo (str): Path to HPO obo file for the version of HPO used in the
+            None, downloads the HPO obo for the version of HPO used in the GEL
             JSON
         '''
         # Get HPO version from JSON
@@ -236,13 +234,14 @@ class excel():
                 f"HPO version in JSON {version} not found in config\n"
                 f"{self.config}"
             )
-        else:
-            dxpy.download_dxfile(obo, "hpo.obo")
+        
+        dxpy.download_dxfile(obo, "hpo.obo")
 
 
     def get_hpo_terms(self, member):
         '''
-        Use obo hpo term ontology (.obo) file to convert HPO IDs to names
+        Use obo hpo term ontology (.obo) file to convert HPO IDs to names.
+        This file has been downloaded and named hpo.obo by get_hpo_obo
         Inputs:
             member (dict): family member dictionary extracted from GEL JSON
         Outputs:
@@ -277,7 +276,6 @@ class excel():
         Inputs:
             member (dict): dictionary for that member in the pedigree in the
             GEL JSON
-            obo (str): path to obo file
             index (int): row to populate in the sheet, specific to that family
             member
         Outputs:
@@ -442,7 +440,7 @@ class excel():
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
-                    var_dict = VariantInfo.get_snv_info(
+                    var_dict = VariantUtils.get_snv_info(
                         snv,
                         self.proband,
                         event_index,
@@ -468,7 +466,7 @@ class excel():
             ]:
             for event in s_t_r["reportEvents"]:
                 if event["tier"] == "TIER1":
-                    var_dict = VariantInfo.get_str_info(
+                    var_dict = VariantUtils.get_str_info(
                         s_t_r, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
@@ -484,7 +482,7 @@ class excel():
                 if cnv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA"
                     ]:
-                    var_dict = VariantInfo.get_cnv_info(
+                    var_dict = VariantUtils.get_cnv_info(
                         cnv, event_index, self.column_list
                     )
                     variant_list.append(var_dict)
@@ -561,7 +559,7 @@ class excel():
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
-        to_report = VariantInfo.get_top_3_ranked(ranked)
+        to_report = VariantUtils.get_top_3_ranked(ranked)
 
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
@@ -570,7 +568,7 @@ class excel():
             # the top ranked event
             event_index = 0
             rank = snv['reportEvents'][0]['vendorSpecificScores']['rank']
-            var_dict = VariantInfo.get_snv_info(
+            var_dict = VariantUtils.get_snv_info(
                 snv,
                 self.proband,
                 event_index,
@@ -601,7 +599,7 @@ class excel():
                     # Threshold for SNVs is 0.0013
                     if event['deNovoQualityScore'] > 0.0013:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_snv_info(
+                        var_dict = VariantUtils.get_snv_info(
                             snv,
                             self.proband,
                             event_index,
@@ -629,7 +627,7 @@ class excel():
                 if event['deNovoQualityScore'] is not None:
                     if event['deNovoQualityScore'] > 0.02:
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_cnv_info(sv,
+                        var_dict = VariantUtils.get_cnv_info(sv,
                                                             event_index,
                                                             self.column_list)
                         var_dict["Priority"] = "De novo"
