@@ -626,11 +626,11 @@ class excel():
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
             for event in sv["reportEvents"]:
-                # Threshold for CNVs is 0.02
+                # Use threshold for CNVs from config
                 if event['deNovoQualityScore'] is not None:
                     if (
                         event['deNovoQualityScore'] >
-                        self.config['denovo_quality_scores']['snv']
+                        self.config['denovo_quality_scores']['cnv']
                         ):
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantUtils.get_cnv_info(sv,
