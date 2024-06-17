@@ -710,7 +710,7 @@ class excel():
         for cnv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
-            for event in cnv[reportEvents"]:
+            for event in cnv["reportEvents"]:
                 # Use threshold for CNVs from config
                 if event['deNovoQualityScore'] is not None:
                     if (
