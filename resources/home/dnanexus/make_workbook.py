@@ -9,8 +9,10 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import Alignment, DEFAULT_FONT, Font
 import os
+from os import path
 from pathlib import Path
 import re
+import dxpy
 
 from excel_styles import ExcelStyles, DropDown
 from get_variant_info import VariantUtils, VariantNomenclature
@@ -116,6 +118,9 @@ class excel():
         with open(self.args.config) as fh:
             self.config = json.load(fh)
 
+        with open(self.args.config) as fh:
+            self.config = json.load(fh)
+
     def summary_page(self):
         '''
         Add summary page. Create a page in the workbook to populate with
@@ -211,8 +216,8 @@ class excel():
 
     def get_hpo_obo(self):
         '''
-        Select which version of HPO to use based on which version was used by
-        GEL when the JSON was made.
+        Select which version of HPO from the input config to use based on
+        which version was used by GEL when the JSON was made.
         Inputs:
             version (str): version of HPO used in JSON
         Outputs:
@@ -234,15 +239,15 @@ class excel():
         if obo is None:
             raise RuntimeError(
                 f"HPO version in JSON {version} not found in config\n"
-                "requires HPO obo files to complete."
                 f"{self.config}"
             )
-
+        
         dxpy.download_dxfile(obo, "hpo.obo")
 
-    def get_hpo_terms(self, member, obo):
+    def get_hpo_terms(self, member):
         '''
-        Use obo hpo term ontology (.obo) file to convert HPO IDs to names
+        Use obo hpo term ontology (.obo) file to convert HPO IDs to names.
+        This file has been downloaded and named hpo.obo by get_hpo_obo
         Inputs:
             member (dict): family member dictionary extracted from GEL JSON
         Outputs:
@@ -277,7 +282,6 @@ class excel():
         Inputs:
             member (dict): dictionary for that member in the pedigree in the
             GEL JSON
-            obo (str): path to obo file
             index (int): row to populate in the sheet, specific to that family
             member
         Outputs:
@@ -703,18 +707,18 @@ class excel():
                         variant_list.append(var_dict)
 
         # CNVs
-        for sv in self.wgs_data["interpretedGenomes"][
+        for cnv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
-            for event in sv["reportEvents"]:
-            # Use threshold for CNVs from config
+            for event in cnv[reportEvents"]:
+                # Use threshold for CNVs from config
                 if event['deNovoQualityScore'] is not None:
                     if (
                         event['deNovoQualityScore'] >
-                        self.config['denovo_quality_scores']['snv']
+                        self.config['denovo_quality_scores']['cnv']
                         ):
-                        event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantUtils.get_cnv_info(sv,
+                        event_index = cnv["reportEvents"].index(event)
+                        var_dict = VariantUtils.get_cnv_info(cnv,
                                                             event_index,
                                                             self.column_list)
                         var_dict["Priority"] = "De novo"

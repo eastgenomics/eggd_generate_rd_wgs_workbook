@@ -18,14 +18,14 @@ main() {
 
     # Generate workbook
     /usr/bin/time -v python3 start_process.py \
-        --json /home/dnanexus/in/json/*json \
-        --mane_file /home/dnanexus/in/mane_file/* \
-        --refseq_tsv /home/dnanexus/in/refseq_tsv/*tsv \
-        --config /home/dnanexus/in/config/*json \
-        $args
+    --json /home/dnanexus/in/json/*json \
+    --mane_file /home/dnanexus/in/mane_file/* \
+    --refseq_tsv /home/dnanexus/in/refseq_tsv/*tsv \
+    --config /home/dnanexus/in/config/*json \
+    $args
 
-    # Upload workbook
     mv *.xlsx /home/dnanexus/out/xlsx_reports
+    # Upload workbook
     output_xlsx=$(dx upload /home/dnanexus/out/xlsx_reports/* --brief)
     dx-jobutil-add-output xlsx_report "$output_xlsx" --class=file
 }

@@ -65,8 +65,9 @@ class SortArgs():
         currently uses the DX file ID.
         """
         if not self.args.output_filename:
-                self.args.output_filename = Path(
-                    self.args.json).name.replace('.json', '.xlsx')
+            self.args.output_filename = Path(
+                self.args.json).name.replace('.json', '.xlsx')
+
 
 
 def main():

@@ -29,6 +29,7 @@ class TestWorkbook():
             }
         }
     }
+
     @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(obo_files=True))
     def test_invalid_hpo_version_dx(self, mock):
@@ -63,6 +64,7 @@ class TestWorkbook():
         self.wgs_data['referral']['referral_data']['pedigree']['members'][0][
             'hpoTermList'
         ][0]['hpoBuildNumber'] = "v2019_02_12"
+
         self.args = mock
         assert excel.get_hpo_obo(
             self
@@ -151,7 +153,9 @@ class TestVariantInfo():
         empty strings as the values.
         '''
         column_list = ["ColA", "ColB"]
-        assert VariantUtils.add_columns_to_dict(column_list) == {"ColA": '', "ColB": ''}
+        assert VariantUtils.add_columns_to_dict(
+            column_list
+        ) == {"ColA": '', "ColB": ''}
 
     def test_tier_conversion(self):
         '''
@@ -170,11 +174,11 @@ class TestVariantInfo():
         tiers = []
         for tiering in tiers_to_convert:
             tiers.append(VariantUtils.convert_tier(tiering[0], tiering[1]))
-        
+
         assert tiers == [
             "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
         ]
-    
+
     def test_get_af_max(self):
         '''
         Test that the highest AF is returned for the variant.
@@ -225,7 +229,7 @@ class TestIndexParticipant():
 
         with pytest.raises(RuntimeError):
             VariantUtils.index_participant(self.variant, self.proband)
-    
+
     def test_returns_none_if_no_idx_provided(self):
         '''
         Check if index is None (i.e. there is no mother and/or father) None
@@ -246,6 +250,7 @@ class TestRanking():
         {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
         {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
     ]
+
     def test_can_handle_two_bronze(self):
         '''
         Check both third ranked items are returned.
@@ -256,6 +261,7 @@ class TestRanking():
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         ]
+
     def test_can_handle_two_silvers(self):
         '''
         Check no third ranked item is returned if there are two second ranked

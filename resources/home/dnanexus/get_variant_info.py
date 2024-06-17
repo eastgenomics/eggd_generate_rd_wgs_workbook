@@ -110,6 +110,7 @@ class VariantUtils():
         paternally_inherited = False
 
         inheritance_types = ['alternate_homozygous', 'heterozygous']
+
         # if there is a mother in the JSON and the variant is alt_homozygous in
         # or heterozygous in the mother then can infer maternal inheritance
         if mother_idx is not None:
@@ -299,6 +300,7 @@ class VariantUtils():
         This function creates a variant dict for specific CNV to be added to
         the excel workbook, where the keys are the columns in the workbook and
         the values are the values for this variant
+
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
             ev_index (int): index of reportEvents list for the event
