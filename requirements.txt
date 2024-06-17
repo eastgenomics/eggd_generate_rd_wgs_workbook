@@ -1,0 +1,12 @@
+colour==0.1.5
+dxpy==0.318.1
+et_xmlfile==1.1.0
+lxml==4.9.3
+numpy==1.22.2
+obonet==1.0.0
+openpyxl==3.1.2
+pandas==1.4.1
+Pillow==9.2.0
+pytest==7.0.1
+pytz==2021.3
+networkx==2.8.5

@@ -1,0 +1,101 @@
+{
+    "name": "eggd_generate_rd_wgs_workbook",
+    "title": "eggd_generate_rd_wgs_workbook",
+    "summary": "Creates an .xlsx workbook given a GEL WGS RD JSON",
+    "whatsNew": "* 1.0.0 Initial version",
+    "dxapi": "1.0.0",
+    "version": "1.0.0",
+    "inputSpec": [
+      {
+        "name": "json",
+        "label": "GEL JSON for WGS rare disease",
+        "class": "file",
+        "optional": false,
+        "help": ""
+      },
+      {
+        "name": "output_filename",
+        "label": "output name prefix for file, if not set will use json input",
+        "class": "string",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "acmg",
+        "label": "add extra ACMG reporting template sheet(s)",
+        "class": "int",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "cnv",
+        "label": "add CNV reporting template sheet(s)",
+        "class": "int",
+        "optional": true,
+        "help": ""
+      },
+      {
+        "name": "mane_file",
+        "label": "MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs",
+        "class": "file",
+        "optional": false,
+        "patterns": ["*.gz"],
+        "help": ""
+      },
+      {
+        "name": "config",
+        "label": "config",
+        "class": "file",
+        "patterns": ["*.json"],
+        "optional": false,
+        "help": ""
+      },
+      {
+        "name": "refseq_tsv",
+        "label": "Refseq tsv which has Ensembl IDs including protein ID for each gene ID",
+        "class": "file",
+        "optional": false,
+        "help": ""
+      } 
+    ],
+    "outputSpec": [
+      {
+        "name": "xlsx_report",
+        "label": "Variant workbook for the given case",
+        "class": "file",
+        "optional": false,
+        "help": ""
+      }
+    ],
+    "runSpec": {
+      "timeoutPolicy": {
+        "*": {
+          "hours": 1
+        }
+      },
+      "interpreter": "bash",
+      "file": "src/code.sh",
+      "distribution": "Ubuntu",
+      "release": "20.04",
+      "version": "0"
+    },
+    "developers":[
+      "org-emee_1"
+    ],
+    "authorizedUsers": [
+      "org-emee_1"
+    ],
+    "access": {
+      "project": "CONTRIBUTE",
+      "allProjects": "VIEW"
+    },
+    "regionalOptions": {
+      "aws:eu-central-1": {
+        "systemRequirements": {
+          "*": {
+            "instanceType": "mem1_ssd1_v2_x2"
+          }
+        }
+      }
+    }
+  }
