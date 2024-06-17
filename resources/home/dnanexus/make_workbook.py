@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 
 from excel_styles import ExcelStyles, DropDown
-from get_variant_info import VariantInfo, VariantNomenclature
+from get_variant_info import VariantUtils, VariantNomenclature
 
 DEFAULT_FONT.name = 'Calibri'
 # row and col counts that are to be unlocked next to
@@ -41,6 +41,7 @@ class excel():
         self.summary_content = None
         self.mane = None
         self.refseq_tsv = None
+        self.config = None
         self.gel_index = None
         self.ex_index = None
         self.var_df = None
@@ -76,9 +77,11 @@ class excel():
         """
         # Initiate files and workbook to write in
         self.open_files()
-        self.writer = pd.ExcelWriter(self.args.output, engine='openpyxl')
+        self.writer = pd.ExcelWriter(
+            self.args.output_filename, engine='openpyxl'
+        )
         self.workbook = self.writer.book
-        print(f"Writing to {self.args.output}...")
+        print(f"Writing to {self.args.output_filename}...")
         # Write in workbook
         self.summary_page()
         self.index_interpretation_services()
@@ -92,7 +95,7 @@ class excel():
         if self.args.cnv:
             for i in range(1, self.args.cnv+1):
                 self.write_cnv_reporting_template(i)
-        self.workbook.save(self.args.output)
+        self.workbook.save(self.args.output_filename)
         if self.args.acmg:
             DropDown.drop_down(self)
         print('Done!')
@@ -104,11 +107,14 @@ class excel():
         with open(self.args.json) as f:
             self.wgs_data = json.load(f)
 
-        with gzip.open(self.args.mane) as f:
+        with gzip.open(self.args.mane_file) as f:
             self.mane = [x.decode('utf8').strip() for x in f.readlines()]
 
         with open(self.args.refseq_tsv) as refseq_tsv:
             self.refseq_tsv = refseq_tsv.readlines()
+        
+        with open(self.args.config) as fh:
+            self.config = json.load(fh)
 
     def summary_page(self):
         '''
@@ -207,49 +213,32 @@ class excel():
         '''
         Select which version of HPO to use based on which version was used by
         GEL when the JSON was made.
-        Works with input obo_files (DNAnexus array of obo files) and input
-        obo_path (local path to directory containing obo files)
         Inputs:
             version (str): version of HPO used in JSON
         Outputs:
-            obo (str): Path to HPO obo file for the version of HPO used in the
+            None, downloads the HPO obo for the version of HPO used in the GEL
             JSON
         '''
+        # Get HPO version from JSON
+        obo = None
         version = self.wgs_data['referral']['referral_data']["pedigree"][
             "members"
             ][0]["hpoTermList"][0]['hpoBuildNumber']
 
-        if self.args.obo_files:
-            if version == "v2019_02_12":
-                obo = "/home/dnanexus/obo_files/hpo_v20190212.obo"
-            elif version == "releases/2018-10-09":
-                obo = "/home/dnanexus/obo_files/hpo_v20181009.obo"
-            else:
-                raise RuntimeError(
-                    f"GEL version of HPO ontology {version} does not match "
-                    "provided obo file(s)"
-                )
+        # Find dx file ID in config for obo file for that version of HPO
+        for k, v in self.config['obos'].items():
+            if k == version:
+                obo = v
 
-        elif self.args.obo_path:
-            if self.args.obo_path.endswith('/'):
-                self.args.obo_path = self.args.obo_path[:-1]
-
-            if version == "v2019_02_12":
-                obo = f"{self.args.obo_path}/hpo_v20190212.obo"
-            elif version == "releases/2018-10-09":
-                obo = f"{self.args.obo_path}/hpo_v20181009.obo"
-            else:
-                raise RuntimeError(
-                    f"GEL version of HPO ontology {version} does not match "
-                    "provided obo file(s)"
-                )
-        else:
+        # If no match found error, else download the HPO obo + call it hpo.obo
+        if obo is None:
             raise RuntimeError(
-                "Neither obo_path or obo_files input provided. Process "
+                f"HPO version in JSON {version} not found in config\n"
                 "requires HPO obo files to complete."
+                f"{self.config}"
             )
 
-        return obo
+        dxpy.download_dxfile(obo, "hpo.obo")
 
     def get_hpo_terms(self, member, obo):
         '''
@@ -264,7 +253,7 @@ class excel():
         hpo_terms = []
         hpo_names = []
         if member["hpoTermList"]:
-            graph = obonet.read_obo(obo)
+            graph = obonet.read_obo("hpo.obo")
             # Read in HPO IDs from JSON
             for i in member["hpoTermList"]:
                 hpo_terms.append(i["term"])
@@ -281,7 +270,7 @@ class excel():
 
         return hpo_names
 
-    def add_person_data_to_summary(self, member, index, obo):
+    def add_person_data_to_summary(self, member, index):
         '''
         Function to add data that is added for all family members to the
         summary sheet. Isolated here as it is the same for all family members
@@ -297,7 +286,7 @@ class excel():
         self.summary_content[(index, 2)] = member["participantId"]
         self.summary_content[(index, 5)] = member["sex"]
         self.summary_content[(index, 6)] = member["affectionStatus"]
-        self.summary_content[(index, 7)] = self.get_hpo_terms(member, obo)
+        self.summary_content[(index, 7)] = self.get_hpo_terms(member)
 
     def person_data(self):
         '''
@@ -311,14 +300,14 @@ class excel():
             None, adds content to openpxyl workbook
         '''
         # Get version of HPO to use for terms
-        obo = self.get_hpo_obo()
+        self.get_hpo_obo()
         pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
         for member in self.wgs_data['referral']['referral_data']["pedigree"][
             "members"
             ]:
             if member["isProband"]:
-                self.add_person_data_to_summary(member, 6, obo)
+                self.add_person_data_to_summary(member, 6)
                 self.proband = member["participantId"]
                 self.proband_sex = member["sex"]
                 self.summary_content[(10, 2)] = member["samples"][0][
@@ -326,16 +315,16 @@ class excel():
                 ]
 
             elif pb_relate(member) == "Mother":
-                self.add_person_data_to_summary(member, 7, obo)
+                self.add_person_data_to_summary(member, 7)
                 self.mother = member["participantId"]
 
             elif pb_relate(member) == "Father":
-                self.add_person_data_to_summary(member, 8, obo)
+                self.add_person_data_to_summary(member, 8)
                 self.father = member["participantId"]
 
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
-                self.add_person_data_to_summary(member, 9, obo)
+                self.add_person_data_to_summary(member, 9)
                 self.siblings = True
 
     def get_panels(self):
@@ -532,7 +521,7 @@ class excel():
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
-                    var_dict = VariantInfo.get_snv_info(
+                    var_dict = VariantUtils.get_snv_info(
                         snv,
                         self.proband,
                         event_index,
@@ -551,15 +540,15 @@ class excel():
                     variant_list.append(var_dict)
 
         # STRs
-        for str in self.wgs_data["interpretedGenomes"][
+        for s_t_r in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"][
                 "shortTandemRepeats"
             ]:
-            for event in str["reportEvents"]:
+            for event in s_t_r["reportEvents"]:
                 if event["tier"] == "TIER1":
-                    var_dict = VariantInfo.get_str_info(
-                        str, self.proband, self.column_list
+                    var_dict = VariantUtils.get_str_info(
+                        s_t_r, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
 
@@ -574,7 +563,7 @@ class excel():
                 if cnv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA"
                     ]:
-                    var_dict = VariantInfo.get_cnv_info(
+                    var_dict = VariantUtils.get_cnv_info(
                         cnv, event_index, self.column_list
                     )
                     variant_list.append(var_dict)
@@ -651,7 +640,7 @@ class excel():
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
-        to_report = VariantInfo.get_top_3_ranked(ranked)
+        to_report = VariantUtils.get_top_3_ranked(ranked)
 
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
@@ -660,7 +649,7 @@ class excel():
             # the top ranked event
             event_index = 0
             rank = snv['reportEvents'][0]['vendorSpecificScores']['rank']
-            var_dict = VariantInfo.get_snv_info(
+            var_dict = VariantUtils.get_snv_info(
                 snv,
                 self.proband,
                 event_index,
@@ -688,10 +677,13 @@ class excel():
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
                 if event['deNovoQualityScore'] is not None:
-                    # Threshold for SNVs is 0.0013
-                    if event['deNovoQualityScore'] > 0.0013:
+                # Use threshold for SNVs from config
+                    if (
+                        event['deNovoQualityScore'] >
+                        self.config['denovo_quality_scores']['snv']
+                        ):
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_snv_info(
+                        var_dict = VariantUtils.get_snv_info(
                             snv,
                             self.proband,
                             event_index,
@@ -715,11 +707,14 @@ class excel():
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
             for event in sv["reportEvents"]:
-                # Threshold for CNVs is 0.02
+            # Use threshold for CNVs from config
                 if event['deNovoQualityScore'] is not None:
-                    if event['deNovoQualityScore'] > 0.02:
+                    if (
+                        event['deNovoQualityScore'] >
+                        self.config['denovo_quality_scores']['snv']
+                        ):
                         event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantInfo.get_cnv_info(sv,
+                        var_dict = VariantUtils.get_cnv_info(sv,
                                                             event_index,
                                                             self.column_list)
                         var_dict["Priority"] = "De novo"

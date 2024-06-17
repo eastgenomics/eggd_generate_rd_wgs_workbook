@@ -26,7 +26,7 @@ class SortArgs():
             )
         )
         parser.add_argument(
-            '-o', '--output', required=False,
+            '-o', '--output_filename', required=False,
             help=(
                 'output name prefix for file, if not set will use json input'
             )
@@ -44,16 +44,13 @@ class SortArgs():
             help='add CNV reporting template sheet(s)'
         )
         parser.add_argument(
-            '--mane',
+            '--mane_file',
             help='MANE list from Ensembl, mapping Ensembl IDs to RefSeq IDs'
         )
         parser.add_argument(
-            '--obo_path',
-            help='Path to Human Phenotype Ontology .obo files'
-        )
-        parser.add_argument(
-            '--obo_files',
-            help='Array of Human Phenotype Ontology .obo files'
+            '--config',
+            help='Config file with HPO versions and thresholds for de novo '
+            'quality score'
         )
         parser.add_argument(
             '--refseq_tsv',
@@ -67,13 +64,9 @@ class SortArgs():
         file. Note for DNAnexus files this will be overwritten later as it
         currently uses the DX file ID.
         """
-        if not self.args.output:
-            self.args.output = Path(
-                self.args.json).name.replace('.json', '')
-
-        self.args.output = (
-            f"{Path(self.args.out_dir)}/{self.args.output}.xlsx"
-        )
+        if not self.args.output_filename:
+                self.args.output_filename = Path(
+                    self.args.json).name.replace('.json', '.xlsx')
 
 
 def main():
