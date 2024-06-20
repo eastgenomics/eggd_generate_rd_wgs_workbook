@@ -16,14 +16,13 @@ Generates an Excel workbook from a Genomics England rare disease case JSON.
 Required
 * `json`: a GEL RD WGS JSON with data to be put into a workbook
 * `refseq_tsv`: a RefSeq TSV with Ensembl protein and transcript IDs
-* `mane`: a MANE csv with ensembl -> refseq transcript ID conversions for MANE transcripts only.
-* `obo_path` OR `obo_files`: the path to a directory with .obo files stored locally, or a DNAnexus array of obo files
+* `mane_file`: a MANE csv with ensembl -> refseq transcript ID conversions for MANE transcripts only.
+* `config`: config file with DNAnexus file IDs for HPO obo files, and thresholds for de novo quality score for SNVs and CNVs
 
 Optional
 * `acmg`: number of SNV ACMG interpretation sheets to add to the workbook
 * `cnv`: number of CNV interpretation sheets to add to the workbook
-* `output`: file name for workbook, if not set with use JSON input file name
-* `out_dir`: path to output directory.
+* `epic_clarity`: .xlsx file of Epic Clarity export, will be used to add sample IDs to the workbook
 
 ## What variants are displayed in the workbook?
 GEL Tiering sheet
