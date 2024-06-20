@@ -15,6 +15,7 @@ main() {
     if [ "$acmg" ]; then args+="--acmg ${acmg} "; fi
     if [ "$cnv" ]; then args+="--cnv ${cnv} "; fi
     if [ "$output_filename" ]; then args+="--output_file_name ${output_filename} "; fi
+    if [ "$clarity_epic" ]; then args+="--clarity_epic ${clarity_epic} "; fi
 
     # Generate workbook
     /usr/bin/time -v python3 start_process.py \

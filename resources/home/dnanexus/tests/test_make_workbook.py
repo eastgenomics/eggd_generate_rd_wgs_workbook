@@ -2,12 +2,22 @@
 import argparse
 import pytest
 import os
+import obonet
 import sys
+import json
 from make_workbook import excel
 from get_variant_info import VariantNomenclature, VariantUtils
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
+
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.realpath(__file__), "../../"))
+)
+
+TEST_DATA_DIR = (
+    os.path.join(os.path.dirname(__file__), 'test_data')
+)
 
 
 class TestWorkbook():
@@ -24,65 +34,61 @@ class TestWorkbook():
                                 {"hpoBuildNumber": "vXXXXXX"}
                             ]
                         }
+                    ],
+                    'diseasePenetrances': [
+                        {
+                            'penetrance': 'complete',
+                            'specificDisease': 'Disease'
+                        },
+                        {
+                            'penetrance': 'incomplete',
+                            'specificDisease': 'OtherDisease'                   
+                        }
                     ]
-                }
+                },
+                'referralTests': [{
+                'analysisPanels': [
+                        {'panelId': "486",
+                        'panelName': "286",
+                        'specificDisease': 'Disease',
+                        'panelVersion': "2.2"}
+                        ]
+                    }
+                ]
             }
         }
     }
+    config_f = f"{TEST_DATA_DIR}/test_config.json"
 
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(obo_files=True))
-    def test_invalid_hpo_version_dx(self, mock):
+    with open(config_f) as f:
+        config = json.load(f)
+
+    def test_invalid_hpo_version_dx(self):
         '''
         Test that if the HPO version is invalid a RunTime error is passed for
         obo file arrays on DNAnexus
         '''
-        self.args = mock
         with pytest.raises(RuntimeError):
             excel.get_hpo_obo(self)
 
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(
-                obo_path='/path/to/wherever/', obo_files=None
-                ))
-    def test_invalid_hpo_versions_path(self, mock):
+    def test_correct_hpo_version_dx(self):
         '''
-        Test that if the HPO version is invalid a RunTime error is passed for
-        obo paths run locally
-        '''
-        self.args = mock
-        with pytest.raises(RuntimeError):
-            excel.get_hpo_obo(self)
-
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(obo_path=None, obo_files=True))
-    def test_correct_hpo_version_dx(self, mock):
-        '''
-        Test that the correct path to obo is given based on the version
-        specified. This test is for obo_files input from DNAnexus
+        Test that the obo version is selected given based on the version
+        specified in the WGS JSON.
         '''
         self.wgs_data['referral']['referral_data']['pedigree']['members'][0][
             'hpoTermList'
         ][0]['hpoBuildNumber'] = "v2019_02_12"
+        excel.get_hpo_obo(self)
 
-        self.args = mock
-        assert excel.get_hpo_obo(
-            self
-        ) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
+        graph = obonet.read_obo("hpo.obo")
+        assert graph.graph['data-version'] == 'releases/2019-02-12'
 
     def test_get_panels(self):
         '''
         Check that panels are extracted from JSON as expected.
         '''
         self.summary_content = {}
-        self.wgs_data = {'referral': {'referral_data': {'referralTests': [{
-            'analysisPanels': [
-                {'panelId': "486",
-                 'panelName': "286",
-                 'specificDisease': 'Disease',
-                 'panelVersion': "2.2"}
-            ]
-        }]}}}
         excel.get_panels(self)
         assert self.summary_content == {
             (14, 1): '486', (14, 2): 'Disease', (14, 3): '2.2', (14, 4): '286'
@@ -94,16 +100,6 @@ class TestWorkbook():
         to the specific disease in the referral
         '''
         self.summary_content = {(2,2): 'Disease'}
-        self.wgs_data = {'referral': {'referral_data': {'pedigree':
-            {'diseasePenetrances':
-                [{'penetrance': 'complete',
-                    'specificDisease': 'Disease'
-                },
-                {
-                    'penetrance': 'incomplete',
-                    'specificDisease': 'OtherDisease'                   
-                }
-                ]}}}}
         excel.get_penetrance(self)
         assert self.summary_content[(3,2)] == "complete"
 
@@ -242,7 +238,6 @@ class TestRanking():
     '''
     Tests for ranking function
     '''
-    # TODO: alter depending on feedback
     snvs = [
         {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
         {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
@@ -264,14 +259,16 @@ class TestRanking():
 
     def test_can_handle_two_silvers(self):
         '''
-        Check no third ranked item is returned if there are two second ranked
+        Check noitem is returned if there are no second ranked
         items
         '''
-        self.snvs[2] = {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+        self.snvs[1] = {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         assert VariantUtils.get_top_3_ranked(self.snvs) == [
             {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
         ]
 
 
@@ -289,3 +286,16 @@ class TestVariantNomenclature():
         assert VariantNomenclature.get_ensp(
             refseq_tsv, "ENST0000033"
         ) == "ENSP0000044"
+
+
+class TestStartProcess():
+    @mock.patch('argparse.ArgumentParser.parse_args',
+        return_value=argparse.Namespace(
+            json="/home/dnanexus/in/json/uid123456789.json"
+            ))
+    def test_file_name_created_from_json_name(self, mock):
+        self.args = mock
+        print(self.args)
+        SortArgs.parse_output(self)
+        print(self.args.output_filename)
+        assert self.args.output_filename == "json"

@@ -114,9 +114,6 @@ class excel():
 
         with open(self.args.refseq_tsv) as refseq_tsv:
             self.refseq_tsv = refseq_tsv.readlines()
-        
-        with open(self.args.config) as fh:
-            self.config = json.load(fh)
 
         with open(self.args.config) as fh:
             self.config = json.load(fh)
@@ -183,9 +180,6 @@ class excel():
         if self.args.clarity_epic:
             self.add_epic_data()
 
-        # TODO: Method to get SP number/NUH number from Epic via Clarity
-        # export and autopopulate summary page with this info.
-
         # write summary content and titles to page
         for key, val in self.bold_content.items():
             summary_sheet.cell(key[0], key[1]).value = val
@@ -241,7 +235,7 @@ class excel():
                 f"HPO version in JSON {version} not found in config\n"
                 f"{self.config}"
             )
-        
+
         dxpy.download_dxfile(obo, "hpo.obo")
 
     def get_hpo_terms(self, member):
@@ -379,9 +373,19 @@ class excel():
 
     def add_epic_data(self):
         '''
-        Read in data from Epic Clarity extract and add to summary page
+        Read in data from Epic Clarity extract and add to summary page,
+        This function assumes that in a case where there is a proband and
+        parent(s), the youngest person is the proband, the older female is the
+        mother and the older male is the father.
+        It does not work for cases where there are siblings (unclear which is
+        the proband, or other relations)
+        Inputs:
+            None, uses Epic clarity export
+        Outputs:
+            None, adds Epic data to Excel workbook.
         '''
         if self.siblings is False:
+            # Read in xlsx as df, using only relevant columns
             df = pd.read_excel(
                 self.args.epic_clarity,
                 usecols=[
@@ -392,10 +396,12 @@ class excel():
                     "YOB"
                     ]
             )
+            # Filter df to only have columns with the family ID for this case
             fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
                 "family_id"
                 ]
             ]
+            # Use most recent year of birth to work out proband, then get IDs
             pb_idx = fam_df['YOB'].idxmax()
             pb_age = fam_df['YOB'].max()
             pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
