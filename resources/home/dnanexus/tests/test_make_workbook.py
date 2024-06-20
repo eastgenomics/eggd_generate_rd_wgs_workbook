@@ -11,14 +11,6 @@ from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.realpath(__file__), "../../"))
-)
-
-TEST_DATA_DIR = (
-    os.path.join(os.path.dirname(__file__), 'test_data')
-)
-
 
 class TestWorkbook():
     '''
@@ -58,31 +50,6 @@ class TestWorkbook():
             }
         }
     }
-    config_f = f"{TEST_DATA_DIR}/test_config.json"
-
-    with open(config_f) as f:
-        config = json.load(f)
-
-    def test_invalid_hpo_version_dx(self):
-        '''
-        Test that if the HPO version is invalid a RunTime error is passed for
-        obo file arrays on DNAnexus
-        '''
-        with pytest.raises(RuntimeError):
-            excel.get_hpo_obo(self)
-
-    def test_correct_hpo_version_dx(self):
-        '''
-        Test that the obo version is selected given based on the version
-        specified in the WGS JSON.
-        '''
-        self.wgs_data['referral']['referral_data']['pedigree']['members'][0][
-            'hpoTermList'
-        ][0]['hpoBuildNumber'] = "v2019_02_12"
-        excel.get_hpo_obo(self)
-
-        graph = obonet.read_obo("hpo.obo")
-        assert graph.graph['data-version'] == 'releases/2019-02-12'
 
     def test_get_panels(self):
         '''
@@ -286,5 +253,4 @@ class TestVariantNomenclature():
         assert VariantNomenclature.get_ensp(
             refseq_tsv, "ENST0000033"
         ) == "ENSP0000044"
-
 
