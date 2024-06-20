@@ -57,7 +57,7 @@ class SortArgs():
             help='Refseq tsv, used to get Ensembl protein IDs'
         )
         parser.add_argument(
-            '--clarity_epic',
+            '--epic_clarity',
             help='Epic Clarity export'
         )
         return parser.parse_args()

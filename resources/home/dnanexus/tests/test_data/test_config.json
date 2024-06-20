@@ -1,0 +1,12 @@
+{   
+    "description": "Config for use with eggd_generate_rd_wgs_workbook",
+    "version": "1.0.0",
+    "obos": {
+        "v2019_02_12": "file-GjjG2j84XQ1qP6jf4Kjv2JKp",
+        "releases/2018-10-09": "file-GjjG2j84XQ1fx0p91Gb5Vg3J"
+    },
+    "denovo_quality_scores": {
+        "cnv": 0.02,
+        "snv": 0.0013
+    }
+}

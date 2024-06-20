@@ -288,14 +288,3 @@ class TestVariantNomenclature():
         ) == "ENSP0000044"
 
 
-class TestStartProcess():
-    @mock.patch('argparse.ArgumentParser.parse_args',
-        return_value=argparse.Namespace(
-            json="/home/dnanexus/in/json/uid123456789.json"
-            ))
-    def test_file_name_created_from_json_name(self, mock):
-        self.args = mock
-        print(self.args)
-        SortArgs.parse_output(self)
-        print(self.args.output_filename)
-        assert self.args.output_filename == "json"

@@ -177,7 +177,7 @@ class excel():
         self.get_panels()
         self.get_penetrance()
         self.person_data()
-        if self.args.clarity_epic:
+        if self.args.epic_clarity:
             self.add_epic_data()
 
         # write summary content and titles to page
