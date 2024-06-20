@@ -259,8 +259,8 @@ class TestRanking():
 
     def test_can_handle_two_silvers(self):
         '''
-        Check noitem is returned if there are no second ranked
-        items
+        Check that third and forth ranked items are returned if there is no
+        second ranked item
         '''
         self.snvs[1] = {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         assert VariantUtils.get_top_3_ranked(self.snvs) == [
