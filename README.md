@@ -16,7 +16,7 @@ Generates an Excel workbook from a Genomics England rare disease case JSON.
 Required
 * `json`: a GEL RD WGS JSON with data to be put into a workbook
 * `refseq_tsv`: a RefSeq TSV with Ensembl protein and transcript IDs
-* `mane_file`: a MANE csv with ensembl -> refseq transcript ID conversions for MANE transcripts only.
+* `mane_file`: a MANE summary.txt.gz summary file
 * `config`: config file with DNAnexus file IDs for HPO obo files, and thresholds for de novo quality score for SNVs and CNVs
 
 Optional
