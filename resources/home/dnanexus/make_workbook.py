@@ -38,7 +38,7 @@ class excel():
         self.proband_sex = None
         self.mother = None
         self.father = None
-        self.siblings = False
+        self.other_relation = False
         self.bold_content = None
         self.summary_content = None
         self.mane = None
@@ -323,7 +323,7 @@ class excel():
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
                 self.add_person_data_to_summary(member, 9)
-                self.siblings = True
+                self.other_relation = True
 
     def get_panels(self):
         '''
@@ -378,13 +378,14 @@ class excel():
         parent(s), the youngest person is the proband, the older female is the
         mother and the older male is the father.
         It does not work for cases where there are siblings (unclear which is
-        the proband, or other relations)
+        the proband), or other relations
         Inputs:
             None, uses Epic clarity export
         Outputs:
             None, adds Epic data to Excel workbook.
         '''
-        if self.siblings is False:
+        # Only run if there are only parents and proband
+        if self.other_relation is False:
             # Read in xlsx as df, using only relevant columns
             df = pd.read_excel(
                 self.args.epic_clarity,
@@ -421,7 +422,8 @@ class excel():
             print(
                 "Cannot reliably determine family relationships based on age"
                 " and sex due to the presence of family members who are not"
-                " the proband or parent(s)"
+                " the proband or parent(s). Continuing without filling Epic "
+                "fields..."
             )
 
     @staticmethod
