@@ -224,7 +224,7 @@ class TestRanking():
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         ]
 
-    def test_can_handle_two_silvers(self):
+    def test_next_ranked_returned_if_no_items_at_rank(self):
         '''
         Check that third and forth ranked items are returned if there is no
         second ranked item
