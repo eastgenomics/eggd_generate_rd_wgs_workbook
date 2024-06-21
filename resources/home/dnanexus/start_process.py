@@ -56,6 +56,10 @@ class SortArgs():
             '--refseq_tsv',
             help='Refseq tsv, used to get Ensembl protein IDs'
         )
+        parser.add_argument(
+            '--epic_clarity',
+            help='Epic Clarity export'
+        )
         return parser.parse_args()
 
     def parse_output(self) -> None:
@@ -67,6 +71,7 @@ class SortArgs():
         if not self.args.output_filename:
             self.args.output_filename = Path(
                 self.args.json).name.replace('.json', '.xlsx')
+
 
 
 def main():

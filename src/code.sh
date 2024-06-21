@@ -15,6 +15,7 @@ main() {
     if [ "$acmg" ]; then args+="--acmg ${acmg} "; fi
     if [ "$cnv" ]; then args+="--cnv ${cnv} "; fi
     if [ "$output_filename" ]; then args+="--output_file_name ${output_filename} "; fi
+    if [ "$epic_clarity" ]; then args+="--epic_clarity /home/dnanexus/in/epic_clarity/*.xlsx "; fi
 
     # Generate workbook
     /usr/bin/time -v python3 start_process.py \

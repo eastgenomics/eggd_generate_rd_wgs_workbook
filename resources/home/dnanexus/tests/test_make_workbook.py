@@ -2,7 +2,9 @@
 import argparse
 import pytest
 import os
+import obonet
 import sys
+import json
 from make_workbook import excel
 from get_variant_info import VariantNomenclature, VariantUtils
 from start_process import SortArgs
@@ -24,82 +26,36 @@ class TestWorkbook():
                                 {"hpoBuildNumber": "vXXXXXX"}
                             ]
                         }
+                    ],
+                    'diseasePenetrances': [
+                        {
+                            'penetrance': 'complete',
+                            'specificDisease': 'Disease'
+                        },
+                        {
+                            'penetrance': 'incomplete',
+                            'specificDisease': 'OtherDisease'                   
+                        }
                     ]
-                }
+                },
+                'referralTests': [{
+                'analysisPanels': [
+                        {'panelId': "486",
+                        'panelName': "286",
+                        'specificDisease': 'Disease',
+                        'panelVersion': "2.2"}
+                        ]
+                    }
+                ]
             }
         }
     }
-
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(obo_files=True))
-    def test_invalid_hpo_version_dx(self, mock):
-        '''
-        Test that if the HPO version is invalid a RunTime error is passed for
-        obo file arrays on DNAnexus
-        '''
-        self.args = mock
-        with pytest.raises(RuntimeError):
-            excel.get_hpo_obo(self)
-
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(
-                obo_path='/path/to/wherever/', obo_files=None
-                ))
-    def test_invalid_hpo_versions_path(self, mock):
-        '''
-        Test that if the HPO version is invalid a RunTime error is passed for
-        obo paths run locally
-        '''
-        self.args = mock
-        with pytest.raises(RuntimeError):
-            excel.get_hpo_obo(self)
-
-    @mock.patch('argparse.ArgumentParser.parse_args',
-            return_value=argparse.Namespace(obo_path=None, obo_files=True))
-    def test_correct_hpo_version_dx(self, mock):
-        '''
-        Test that the correct path to obo is given based on the version
-        specified. This test is for obo_files input from DNAnexus
-        '''
-        self.wgs_data['referral']['referral_data']['pedigree']['members'][0][
-            'hpoTermList'][0]['hpoBuildNumber'] = "v2019_02_12"
-        self.args = mock
-        assert excel.get_hpo_obo(
-            self
-        ) == "/home/dnanexus/obo_files/hpo_v20190212.obo"
-
-    # TODO: make the following test work
-    # @mock.patch('argparse.ArgumentParser.parse_args',
-    #         return_value=argparse.Namespace(
-    #             obo_path='/path/to/wherever/', obo_files=None
-    #             ))
-    # def test_correct_hpo_version_path(self, mock):
-    #     '''
-    #     Test that the correct path to obo is given based on the version
-    #     specified. This test is for obo_path input from the command line
-    #     '''
-    #     self.wgs_data = {'referral': {'referral_data': {'pedigree':
-    #     {'members': [{
-    #         'hpoTermList': [
-    #             {'hpoBuildNumber': "v2019_02_12"}
-    #         ]
-    #     }]}}}}
-    #     self.args = mock
-    #     assert excel.get_hpo_obo(self) == "/path/to/wherever/hpo_v20190212.obo"
 
     def test_get_panels(self):
         '''
         Check that panels are extracted from JSON as expected.
         '''
         self.summary_content = {}
-        self.wgs_data = {'referral': {'referral_data': {'referralTests': [{
-            'analysisPanels': [
-                {'panelId': "486",
-                 'panelName': "286",
-                 'specificDisease': 'Disease',
-                 'panelVersion': "2.2"}
-            ]
-        }]}}}
         excel.get_panels(self)
         assert self.summary_content == {
             (14, 1): '486', (14, 2): 'Disease', (14, 3): '2.2', (14, 4): '286'
@@ -111,16 +67,6 @@ class TestWorkbook():
         to the specific disease in the referral
         '''
         self.summary_content = {(2,2): 'Disease'}
-        self.wgs_data = {'referral': {'referral_data': {'pedigree':
-            {'diseasePenetrances':
-                [{'penetrance': 'complete',
-                    'specificDisease': 'Disease'
-                },
-                {
-                    'penetrance': 'incomplete',
-                    'specificDisease': 'OtherDisease'                   
-                }
-                ]}}}}
         excel.get_penetrance(self)
         assert self.summary_content[(3,2)] == "complete"
 
@@ -259,7 +205,6 @@ class TestRanking():
     '''
     Tests for ranking function
     '''
-    # TODO: alter depending on feedback
     snvs = [
         {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
         {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
@@ -279,16 +224,18 @@ class TestRanking():
             {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         ]
 
-    def test_can_handle_two_silvers(self):
+    def test_next_ranked_returned_if_no_items_at_rank(self):
         '''
-        Check no third ranked item is returned if there are two second ranked
-        items
+        Check that third and forth ranked items are returned if there is no
+        second ranked item
         '''
-        self.snvs[2] = {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+        self.snvs[1] = {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
         assert VariantUtils.get_top_3_ranked(self.snvs) == [
             {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}}
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
+            {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
         ]
 
 
@@ -306,3 +253,4 @@ class TestVariantNomenclature():
         assert VariantNomenclature.get_ensp(
             refseq_tsv, "ENST0000033"
         ) == "ENSP0000044"
+

@@ -65,7 +65,7 @@ class ExcelStyles():
         Outputs:
             None, adds content to openpxyl workbook
         '''
-        for col in ['C', 'D', 'M']:
+        for col in ['C', 'D']:
             sheet.column_dimensions[col].width = 14
         for col in ['J']:
             sheet.column_dimensions[col].width = 10
@@ -75,9 +75,9 @@ class ExcelStyles():
             sheet.column_dimensions[col].width = 12
         sheet.column_dimensions['B'].width = 5
         sheet.column_dimensions['O'].width = 15
-        for col in ['M', 'N', 'P']:
+        for col in ['M', 'N', 'P', 'Q', 'U']:
             sheet.column_dimensions[col].width = 20
-        for col in ['W', 'X']:
+        for col in ['V', 'W']:
             sheet.column_dimensions[col].width = 25
 
 

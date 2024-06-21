@@ -110,7 +110,7 @@ class VariantUtils():
         paternally_inherited = False
 
         inheritance_types = ['alternate_homozygous', 'heterozygous']
-        
+
         # if there is a mother in the JSON and the variant is alt_homozygous in
         # or heterozygous in the mother then can infer maternal inheritance
         if mother_idx is not None:
@@ -138,6 +138,37 @@ class VariantUtils():
             inheritance = "both"
 
         return inheritance
+
+    @staticmethod
+    def convert_moi(moi):
+        '''
+        Convert MOI for SNV to use more human readable wording
+        Inputs
+            moi (str): ModeOfInheritance field from GEL JSON
+        Outputs
+            Converted ModeOfInheritance
+        '''
+        conversion = {
+            "biallelic": "Autosomal Recessive",
+            "monoallelic_not_imprinted": "Autosomal Dominant",
+            "monoallelic_paternally_imprinted": "Autosomal Dominant - "
+            "Paternally Imprinted",
+            "monoallelic_maternally_imprinted": "Autosomal Dominant - "
+            "Maternally Imprinted",
+            "xlinked_biallelic": "X-Linked Recessive",
+            "xlinked_monoallelic": "X-Linked Dominant",
+            "mitochondrial": "Mitochondrial"
+        }
+
+        try:
+            c_moi = conversion[moi]
+        except KeyError:
+            c_moi = None
+            print(
+                f"Could not find ModeOfInheritance {moi} in conversion table"
+                f"{conversion}. Setting MOI to None for this variant."
+            )
+        return c_moi
 
     @staticmethod
     def index_participant(variant, participant_id):
@@ -246,13 +277,13 @@ class VariantUtils():
         var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
             "penetrance"
         ]
-        # TODO: Convert MOI into more readable names, waiting for analyist
-        # feedback before actioning.
-        var_dict["Inheritance mode"] = variant["reportEvents"][ev_idx][
-            "modeOfInheritance"
-        ]
+        var_dict["Inheritance mode"] = VariantUtils.convert_moi(
+            variant["reportEvents"][ev_idx]["modeOfInheritance"]
+        )
         var_dict["Inheritance"] = (
-            VariantUtils.get_inheritance(variant, mother_idx, father_idx, pb_sex)
+            VariantUtils.get_inheritance(
+                variant, mother_idx, father_idx, pb_sex
+            )
         )
         return var_dict
 
@@ -265,7 +296,8 @@ class VariantUtils():
 
         This function creates a variant dict for specific CNV to be added to
         the excel workbook, where the keys are the columns in the workbook and
-        the values are the values for this varian
+        the values are the values for this variant
+
         Inputs:
             variant: (dict) dict extracted from JSON describing single variant
             ev_index (int): index of reportEvents list for the event
@@ -296,15 +328,13 @@ class VariantUtils():
         Get top 3 ranked Exomiser variants; this function uses a podium format
         so that equal ranks can be reported back.
         Uses gold, silver and bronze to refer to the top, second and third
-        ranked times
+        ranked variants. It will return all variants at each rank; so all the
+        first ranked, all the second ranked and all the third ranked variants.
         Inputs
             ranked (list): list of Exomiser variants
         Outputs:
             to_report (list): top three Exomiser variants to report back
         '''
-        # TODO: Reconfigure based on analyst feedback
-        # Debate between “olympic-style” podium and “boxing-style” podium.
-        # i.e. should this be 1 2 2 3 == 1 2 2 or 1 2 2 3
         gold = []
         silver = []
         bronze = []
@@ -315,29 +345,23 @@ class VariantUtils():
 
         for snv in ordered_list:
             if not gold:
-                gold = [snv]
+                gold.append(snv)
                 continue
             else:
                 if rank(snv) == rank(gold[0]):
                     gold.append(snv)
                     continue
 
-            if len(gold) >= 3:
-                break
-
             if not silver:
-                silver = [snv]
+                silver.append(snv)
                 continue
             else:
                 if rank(snv) == rank(silver[0]):
                     silver.append(snv)
                     continue
 
-            if len(gold) + len(silver) >= 3:
-                break
-
             if not bronze:
-                bronze = [snv]
+                bronze.append(snv)
                 continue
             else:
                 if rank(snv) == rank(bronze[0]):
@@ -346,9 +370,7 @@ class VariantUtils():
                 else:
                     break
 
-        to_report = gold + silver + bronze
-
-        return to_report
+        return gold + silver + bronze
 
 
 class VariantNomenclature():
@@ -404,6 +426,7 @@ class VariantNomenclature():
         gene_symbol:ensembl_transcript_id:c_dot:p_dot
         This function extracts the cdot (with MANE refseq equivalent to
         ensembl transcript ID if found) and pdot (with ensembl protein ID)
+        Exomiser variants only have one transcript in the JSON.
         Inputs:
             variant: (dict) dict describing single variant from JSON
             mane: MANE file for transcripts
@@ -420,16 +443,23 @@ class VariantNomenclature():
         hgvs_source = variant['variantAttributes'][
             'additionalTextualVariantAnnotations'
             ]['hgvs']
+        # Try converting Ensembl transcript to get RefSeq MANE
         refseq = VariantNomenclature.convert_ensembl_to_refseq_mane(
             mane, hgvs_source.split(':')[1]
         )
+        # If no MANE, return Ensembl transcript nomenclature
         if refseq is not None:
             hgvs_c = refseq + ":" + hgvs_source.split(':')[2]
+        else:
+            hgvs_c = hgvs_source.split(':')[1] + ':' + hgvs_source.split(':')[2]
+
+        # get equivalent ENSP to transcript and construct p dot equivalent.
         ensp = VariantNomenclature.get_ensp(
             refseq_tsv, hgvs_source.split(':')[1].split('.')[0]
         )
         if ensp is not None:
             hgvs_p = ensp + ':' + hgvs_source.split(':')[3]
+
         return hgvs_c, hgvs_p
 
     @staticmethod
@@ -465,24 +495,22 @@ class VariantNomenclature():
                 ref_list.append(refseq + cdna.split(')')[1])
                 enst_list.append(cdna.split('(')[0])
 
+        # should not match more than one NM_ MANE transcript
         if len(set(ref_list)) > 1:
             raise RuntimeError(
                 f"Transcript {cdnas} matched more than one MANE transcript"
             )
+
+        # If no MANE match is found, return all transcripts
         elif len(set(ref_list)) == 0:
-            # if there is no MANE equivalent refseq, use the ensembl
-            # transcript ID, remove gene ID in brackets.
-            # currently we just use the first one in the list! is there a
-            # better way to do this?
-            # TODO: this will considered and corrected with feedback
-            # TODO: provide all of them?
-            hgvs_c = re.sub("\(.*?\)", "", cdnas[0])
-            ensp = VariantNomenclature.get_ensp(
-                refseq_tsv, cdnas[0].split('(')[0]
-            )
+            hgvs_c_list = []
+            ensp_list = []
+            for cdna in cdnas:
+                hgvs_c_list.append(re.sub("\(.*?\)", "", cdna))
             for protein in protein_changes:
-                if ensp in protein:
-                    hgvs_p = protein
+                ensp_list.append(protein)
+            hgvs_c = ', '.join(hgvs_c_list)
+            hgvs_p = ', '.join(ensp_list)
 
         else:
             hgvs_c = list(set(ref_list))[0]

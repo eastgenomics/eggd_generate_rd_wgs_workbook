@@ -38,6 +38,7 @@ class excel():
         self.proband_sex = None
         self.mother = None
         self.father = None
+        self.other_relation = False
         self.bold_content = None
         self.summary_content = None
         self.mane = None
@@ -176,8 +177,8 @@ class excel():
         self.get_panels()
         self.get_penetrance()
         self.person_data()
-        # TODO: Method to get SP number/NUH number from Epic via Clarity
-        # export and autopopulate summary page with this info.
+        if self.args.epic_clarity:
+            self.add_epic_data()
 
         # write summary content and titles to page
         for key, val in self.bold_content.items():
@@ -234,9 +235,8 @@ class excel():
                 f"HPO version in JSON {version} not found in config\n"
                 f"{self.config}"
             )
-        
-        dxpy.download_dxfile(obo, "hpo.obo")
 
+        dxpy.download_dxfile(obo, "hpo.obo")
 
     def get_hpo_terms(self, member):
         '''
@@ -323,6 +323,7 @@ class excel():
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
                 self.add_person_data_to_summary(member, 9)
+                self.other_relation = True
 
     def get_panels(self):
         '''
@@ -369,6 +370,98 @@ class excel():
                 disease_penetrance = penetrance["penetrance"]
 
         self.summary_content[(3, 2)] = disease_penetrance
+
+    def add_epic_data(self):
+        '''
+        Read in data from Epic Clarity extract and add to summary page,
+        This function assumes that in a case where there is a proband and
+        parent(s), the youngest person is the proband, the older female is the
+        mother and the older male is the father.
+        It does not work for cases where there are siblings (unclear which is
+        the proband), or other relations
+        Inputs:
+            None, uses Epic clarity export
+        Outputs:
+            None, adds Epic data to Excel workbook.
+        '''
+        # Only run if there are only parents and proband
+        if self.other_relation is False:
+            # Read in xlsx as df, using only relevant columns
+            df = pd.read_excel(
+                self.args.epic_clarity,
+                usecols=[
+                    "WGS Referral ID",
+                    "External Specimen Identifier",
+                    "Specimen Identifier",
+                    "Sex",
+                    "YOB"
+                    ]
+            )
+            # Filter df to only have rows with the family ID for this case
+            fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
+                "family_id"
+                ]
+            ]
+            # Use most recent year of birth to work out proband, then get IDs
+            pb_idx = fam_df['YOB'].idxmax()
+            pb_age = fam_df['YOB'].max()
+            pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
+
+            m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
+            f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
+
+            self.summary_content[(6, 3)] = pb_sp
+            self.summary_content[(6, 4)] = pb_nuh
+
+            self.summary_content[(7, 3)] = m_sp
+            self.summary_content[(7, 4)] = m_nuh
+
+            self.summary_content[(8, 3)] = f_sp
+            self.summary_content[(8, 4)] = f_nuh
+        else:
+            print(
+                "Cannot reliably determine family relationships based on age"
+                " and sex due to the presence of family members who are not"
+                " the proband or parent(s). Continuing without filling Epic "
+                "fields..."
+            )
+
+    @staticmethod
+    def get_ids(df, row):
+        '''
+        Get the SP number and NUH ID from a given row in the dataframe
+        Inputs
+            df: pandas dataframe of the family in the Epic clarity export
+            row: row in the df for which to get data
+        Outputs
+            sp_number: Epic sample number
+            nuh_id: External sample ID for NUH samples
+        '''
+        sp_number = df.loc[row, "Specimen Identifier"]
+        nuh_id = df.loc[row, "External Specimen Identifier"]
+        return sp_number, nuh_id
+
+    def get_parent_ids(self, pb_yob, df, sex):
+        '''
+        Get the SP number and NUH ID for the parents, assuming that mother is
+        female and older than the proband, and father is male and older than
+        the proband
+        Inputs
+            df: pandas dataframe of the family in the Epic clarity export
+            pb_yob: year of birth of the proband
+            sex: sex of the parent
+        Outputs:
+            p_sp: Epic sample number for the parent
+            p_nuh: External sample ID for NUH samples for the parent
+        '''
+        parent_df = df[(df['Sex'] == sex) & (df['YOB'] < pb_yob)]
+        if parent_df.empty:
+            p_sp = None
+            p_nuh = None
+        else:
+            p_idx = parent_df.index.tolist()[0]
+            p_sp, p_nuh = self.get_ids(df, p_idx)
+        return p_sp, p_nuh
 
     def index_interpretation_services(self):
         '''
@@ -596,7 +689,7 @@ class excel():
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
                 if event['deNovoQualityScore'] is not None:
-                    # Use threshold for SNVs from config
+                # Use threshold for SNVs from config
                     if (
                         event['deNovoQualityScore'] >
                         self.config['denovo_quality_scores']['snv']
@@ -622,27 +715,23 @@ class excel():
                         variant_list.append(var_dict)
 
         # CNVs
-        for sv in self.wgs_data["interpretedGenomes"][
+        for cnv in self.wgs_data["interpretedGenomes"][
             self.gel_index
             ]["interpretedGenomeData"]["structuralVariants"]:
-            for event in sv["reportEvents"]:
+            for event in cnv["reportEvents"]:
                 # Use threshold for CNVs from config
                 if event['deNovoQualityScore'] is not None:
                     if (
                         event['deNovoQualityScore'] >
                         self.config['denovo_quality_scores']['cnv']
                         ):
-                        event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantUtils.get_cnv_info(sv,
+                        event_index = cnv["reportEvents"].index(event)
+                        var_dict = VariantUtils.get_cnv_info(cnv,
                                                             event_index,
                                                             self.column_list)
                         var_dict["Priority"] = "De novo"
                         var_dict["Inheritance"] = "De novo"
                         variant_list.append(var_dict)
-
-        # TODO
-        # handle STR / SVs which appear to be null in Exomiser
-        # (always? sometimes?)
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
@@ -652,10 +741,6 @@ class excel():
             col_except_priority.remove('Priority')
             # Merge exomiser df with tiered variants df, indicating if there
             # is a difference between Priority
-            result = self.var_df.dtypes
-            print(result)
-            alt = ex_df.dtypes
-            print(alt)
             ex_df = ex_df.merge(
                 self.var_df,
                 left_on=col_except_priority,
