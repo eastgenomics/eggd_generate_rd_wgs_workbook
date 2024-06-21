@@ -397,7 +397,7 @@ class excel():
                     "YOB"
                     ]
             )
-            # Filter df to only have columns with the family ID for this case
+            # Filter df to only have rows with the family ID for this case
             fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
                 "family_id"
                 ]
