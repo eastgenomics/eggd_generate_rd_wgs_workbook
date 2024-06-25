@@ -402,22 +402,24 @@ class excel():
                 "family_id"
                 ]
             ]
+
+            if not fam_df.empty:
             # Use most recent year of birth to work out proband, then get IDs
-            pb_idx = fam_df['YOB'].idxmax()
-            pb_age = fam_df['YOB'].max()
-            pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
+                pb_idx = fam_df['YOB'].idxmax()
+                pb_age = fam_df['YOB'].max()
+                pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
 
-            m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
-            f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
+                m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
+                f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
 
-            self.summary_content[(6, 3)] = pb_sp
-            self.summary_content[(6, 4)] = pb_nuh
+                self.summary_content[(6, 3)] = pb_sp
+                self.summary_content[(6, 4)] = pb_nuh
 
-            self.summary_content[(7, 3)] = m_sp
-            self.summary_content[(7, 4)] = m_nuh
+                self.summary_content[(7, 3)] = m_sp
+                self.summary_content[(7, 4)] = m_nuh
 
-            self.summary_content[(8, 3)] = f_sp
-            self.summary_content[(8, 4)] = f_nuh
+                self.summary_content[(8, 3)] = f_sp
+                self.summary_content[(8, 4)] = f_nuh
         else:
             print(
                 "Cannot reliably determine family relationships based on age"
