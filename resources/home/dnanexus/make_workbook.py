@@ -384,6 +384,7 @@ class excel():
         Outputs:
             None, adds Epic data to Excel workbook.
         '''
+        family_id = self.wgs_data['family_id']
         # Only run if there are only parents and proband
         if self.other_relation is False:
             # Read in xlsx as df, using only relevant columns
@@ -398,32 +399,36 @@ class excel():
                     ]
             )
             # Filter df to only have rows with the family ID for this case
-            fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
-                "family_id"
-                ]
-            ]
+            fam_df = df.loc[df['WGS Referral ID'] == family_id]
+
+            if not fam_df.empty:
             # Use most recent year of birth to work out proband, then get IDs
-            pb_idx = fam_df['YOB'].idxmax()
-            pb_age = fam_df['YOB'].max()
-            pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
+                pb_idx = fam_df['YOB'].idxmax()
+                pb_age = fam_df['YOB'].max()
+                pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
 
-            m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
-            f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
+                m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
+                f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
 
-            self.summary_content[(6, 3)] = pb_sp
-            self.summary_content[(6, 4)] = pb_nuh
+                self.summary_content[(6, 3)] = pb_sp
+                self.summary_content[(6, 4)] = pb_nuh
 
-            self.summary_content[(7, 3)] = m_sp
-            self.summary_content[(7, 4)] = m_nuh
+                self.summary_content[(7, 3)] = m_sp
+                self.summary_content[(7, 4)] = m_nuh
 
-            self.summary_content[(8, 3)] = f_sp
-            self.summary_content[(8, 4)] = f_nuh
+                self.summary_content[(8, 3)] = f_sp
+                self.summary_content[(8, 4)] = f_nuh
+            else:
+                print(
+                    f"Family ID {family_id} not found in Epic Clarity export. "
+                    "Continuing without adding sample IDs from Epic..."
+                )
         else:
             print(
                 "Cannot reliably determine family relationships based on age"
                 " and sex due to the presence of family members who are not"
-                " the proband or parent(s). Continuing without filling Epic "
-                "fields..."
+                " the proband or parent(s). Continuing without adding sample "
+                "IDs from Epic..."
             )
 
     @staticmethod
