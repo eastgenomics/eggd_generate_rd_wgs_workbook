@@ -420,12 +420,18 @@ class excel():
 
                 self.summary_content[(8, 3)] = f_sp
                 self.summary_content[(8, 4)] = f_nuh
+            else:
+                print(
+                    f"Family ID {self.wgs_data["family_id"]} not found in Epic"
+                    "Clarity export. Continuing without adding sample IDs from"
+                    "Epic..."
+                )
         else:
             print(
                 "Cannot reliably determine family relationships based on age"
                 " and sex due to the presence of family members who are not"
-                " the proband or parent(s). Continuing without filling Epic "
-                "fields..."
+                " the proband or parent(s). Continuing without adding sample "
+                "IDs from Epic..."
             )
 
     @staticmethod
