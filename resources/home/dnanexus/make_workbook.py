@@ -399,7 +399,7 @@ class excel():
                     ]
             )
             # Filter df to only have rows with the family ID for this case
-            fam_df = df.loc[df['WGS Referral ID'] == family_id            ]
+            fam_df = df.loc[df['WGS Referral ID'] == family_id]
 
             if not fam_df.empty:
             # Use most recent year of birth to work out proband, then get IDs
