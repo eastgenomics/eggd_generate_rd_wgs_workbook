@@ -384,6 +384,7 @@ class excel():
         Outputs:
             None, adds Epic data to Excel workbook.
         '''
+        family_id = self.wgs_data['family_id']
         # Only run if there are only parents and proband
         if self.other_relation is False:
             # Read in xlsx as df, using only relevant columns
@@ -398,10 +399,7 @@ class excel():
                     ]
             )
             # Filter df to only have rows with the family ID for this case
-            fam_df = df.loc[df['WGS Referral ID'] == self.wgs_data[
-                "family_id"
-                ]
-            ]
+            fam_df = df.loc[df['WGS Referral ID'] == family_id            ]
 
             if not fam_df.empty:
             # Use most recent year of birth to work out proband, then get IDs
@@ -422,9 +420,8 @@ class excel():
                 self.summary_content[(8, 4)] = f_nuh
             else:
                 print(
-                    f"Family ID {self.wgs_data["family_id"]} not found in Epic"
-                    "Clarity export. Continuing without adding sample IDs from"
-                    "Epic..."
+                    f"Family ID {family_id} not found in Epic Clarity export. "
+                    "Continuing without adding sample IDs from Epic..."
                 )
         else:
             print(
