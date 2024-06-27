@@ -628,10 +628,8 @@ class excel():
         This function works out if a variant is an indel based on having either
         a ref or an alt sequence > 1
         '''
-        if (
-                len(variant["variantCoordinates"]["reference"]) > 1 or
-                len(variant["variantCoordinates"]["alternate"]) > 1
-            ):
+        if (len(variant["variantCoordinates"]["reference"]) > 1 or
+                len(variant["variantCoordinates"]["alternate"]) > 1):
             threshold = self.config['denovo_quality_scores']['indel']
         else:
             threshold = self.config['denovo_quality_scores']['snv']
