@@ -629,8 +629,8 @@ class excel():
         a ref or an alt sequence > 1
         '''
         if (
-            len(variant["variantCoordinates"]["reference"]) > 1 or
-            len(variant["variantCoordinates"]["alternate"]) > 1
+                len(variant["variantCoordinates"]["reference"]) > 1 or
+                len(variant["variantCoordinates"]["alternate"]) > 1
             ):
             threshold = self.config['denovo_quality_scores']['indel']
         else:
