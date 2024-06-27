@@ -264,22 +264,22 @@ class TestDeNovoThresholds():
     '''
     variants = [
         {
-        "variantCoordinates": {
-            "reference": "GT",
-            "alternate": "G"
-            },
+            "variantCoordinates": {
+                "reference": "GT",
+                "alternate": "G"
+                },
         },
         {
-        "variantCoordinates": {
-            "reference": "C",
-            "alternate": "G"
-            },
+            "variantCoordinates": {
+                "reference": "C",
+                "alternate": "G"
+                },
         },
         {
-        "variantCoordinates": {
-            "reference": "A",
-            "alternate": "AC"
-            },
+            "variantCoordinates": {
+                "reference": "A",
+                "alternate": "AC"
+                },
         },
     ]
     config = {
@@ -288,6 +288,7 @@ class TestDeNovoThresholds():
             "snv": 0.0013
         }
     }
+
     def test_deletion_de_novo_threshold_correct(self):
         '''
         Test that get_de_novo_threshold gets correct threshold for an deletion

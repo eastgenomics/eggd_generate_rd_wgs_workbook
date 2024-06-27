@@ -627,10 +627,11 @@ class excel():
         The de novo quality score thresholds are different for indels or SNVs
         This function works out if a variant is an indel based on having either
         a ref or an alt sequence > 1
-        
         '''
-        if (len(variant["variantCoordinates"]["reference"]) > 1 or
-            len(variant["variantCoordinates"]["alternate"])> 1):
+        if (
+            len(variant["variantCoordinates"]["reference"]) > 1 or
+            len(variant["variantCoordinates"]["alternate"]) > 1
+            ):
             threshold = self.config['denovo_quality_scores']['indel']
         else:
             threshold = self.config['denovo_quality_scores']['snv']
@@ -707,8 +708,10 @@ class excel():
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
                 if event['deNovoQualityScore'] is not None:
-                    if (event['deNovoQualityScore'] >
-                        self.get_de_novo_threshold(snv)):
+                    if (
+                        event['deNovoQualityScore'] >
+                        self.get_de_novo_threshold(snv)
+                        ):
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantUtils.get_snv_info(
                             snv,
