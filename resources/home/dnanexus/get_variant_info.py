@@ -78,11 +78,11 @@ class VariantUtils():
             variant (dict): dict describing a single variant from JSON
         Outputs:
             highest_af: frequency of the variant in the population with
-            the highest allele frequency for the variant, or 0 if the variant
-            is not seen in any populations in the JSON
+            the highest allele frequency for the variant, or - if the variant
+            is not seen in any populations in the JSON, or - if there are no
+            reference populations.
         '''
         highest_af = 0
-        print(type(highest_af))
         if variant['variantAttributes']['alleleFrequencies'] is None:
             highest_af = '-'
         else:
