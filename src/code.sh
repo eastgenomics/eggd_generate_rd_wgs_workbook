@@ -21,7 +21,7 @@ main() {
     /usr/bin/time -v python3 start_process.py \
     --json /home/dnanexus/in/json/*json \
     --mane_file /home/dnanexus/in/mane_file/* \
-    --refseq_tsv /home/dnanexus/in/refseq_tsv/*tsv \
+    --refseq_tsv /home/dnanexus/in/refseq_tsv/* \
     --config /home/dnanexus/in/config/*json \
     $args
 

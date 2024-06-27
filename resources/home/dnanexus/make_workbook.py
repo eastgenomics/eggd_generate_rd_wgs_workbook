@@ -112,11 +112,12 @@ class excel():
         with gzip.open(self.args.mane_file) as f:
             self.mane = [x.decode('utf8').strip() for x in f.readlines()]
 
-        with open(self.args.refseq_tsv) as refseq_tsv:
-            self.refseq_tsv = refseq_tsv.readlines()
+        with gzip.open(self.args.refseq_tsv) as f:
+            self.refseq_tsv = [x.decode('utf8').strip() for x in f.readlines()]
 
         with open(self.args.config) as fh:
             self.config = json.load(fh)
+
 
     def summary_page(self):
         '''
@@ -621,6 +622,21 @@ class excel():
             else:
                 summary_sheet[key] = 0
 
+    def get_de_novo_threshold(self, variant):
+        '''
+        The de novo quality score thresholds are different for indels or SNVs
+        This function works out if a variant is an indel based on having either
+        a ref or an alt sequence > 1
+        
+        '''
+        if (len(variant["variantCoordinates"]["reference"]) > 1 or
+            len(variant["variantCoordinates"]["alternate"])> 1):
+            threshold = self.config['denovo_quality_scores']['indel']
+        else:
+            threshold = self.config['denovo_quality_scores']['snv']
+
+        return threshold
+
     def create_additional_analysis_page(self):
         '''
         Get Tier3/Null SNVs for Exomiser/deNovo analysis
@@ -684,21 +700,15 @@ class excel():
                 )
             variant_list.append(var_dict)
 
-        # Look through GEL variants and return those with high de novo quality
-        # score
-        # TODO could these have already been reported in the gel tiering sheet?
-        # if so need to avoid duplicating!
-        # For SNVs
+        # Get variants with high de novo quality score (these are either SNVs
+        # or indels)
         for snv in self.wgs_data["interpretedGenomes"][
                 self.gel_index
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
                 if event['deNovoQualityScore'] is not None:
-                # Use threshold for SNVs from config
-                    if (
-                        event['deNovoQualityScore'] >
-                        self.config['denovo_quality_scores']['snv']
-                        ):
+                    if (event['deNovoQualityScore'] >
+                        self.get_de_novo_threshold(snv)):
                         event_index = snv["reportEvents"].index(event)
                         var_dict = VariantUtils.get_snv_info(
                             snv,
@@ -717,25 +727,6 @@ class excel():
                                 self.mane,
                                 self.refseq_tsv)
                         )
-                        variant_list.append(var_dict)
-
-        # CNVs
-        for cnv in self.wgs_data["interpretedGenomes"][
-            self.gel_index
-            ]["interpretedGenomeData"]["structuralVariants"]:
-            for event in cnv["reportEvents"]:
-                # Use threshold for CNVs from config
-                if event['deNovoQualityScore'] is not None:
-                    if (
-                        event['deNovoQualityScore'] >
-                        self.config['denovo_quality_scores']['cnv']
-                        ):
-                        event_index = cnv["reportEvents"].index(event)
-                        var_dict = VariantUtils.get_cnv_info(cnv,
-                                                            event_index,
-                                                            self.column_list)
-                        var_dict["Priority"] = "De novo"
-                        var_dict["Inheritance"] = "De novo"
                         variant_list.append(var_dict)
 
         ex_df = pd.DataFrame(variant_list)
