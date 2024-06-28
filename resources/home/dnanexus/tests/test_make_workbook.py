@@ -254,3 +254,55 @@ class TestVariantNomenclature():
             refseq_tsv, "ENST0000033"
         ) == "ENSP0000044"
 
+
+class TestDeNovoThresholds():
+    '''
+    Tests for function that gets the de novo quality score threshold based on
+    the ref and alt of the variant. The threshold should be different for
+    indels and SNVs, so this test assumes that a ref or alt longer than one
+    base is an indel.
+    '''
+    variants = [
+        {
+            "variantCoordinates": {
+                "reference": "GT",
+                "alternate": "G"
+                },
+        },
+        {
+            "variantCoordinates": {
+                "reference": "C",
+                "alternate": "G"
+                },
+        },
+        {
+            "variantCoordinates": {
+                "reference": "A",
+                "alternate": "AC"
+                },
+        },
+    ]
+    config = {
+        "denovo_quality_scores": {
+            "indel": 0.02,
+            "snv": 0.0013
+        }
+    }
+
+    def test_deletion_de_novo_threshold_correct(self):
+        '''
+        Test that get_de_novo_threshold gets correct threshold for an deletion
+        '''
+        assert excel.get_de_novo_threshold(self, self.variants[0]) == 0.02
+
+    def test_snv_de_novo_threshold_correct(self):
+        '''
+        Test that get_de_novo_threshold gets correct threshold for an SNV
+        '''
+        assert excel.get_de_novo_threshold(self, self.variants[1]) == 0.0013
+
+    def test_insertion_de_novo_threshold_correct(self):
+        '''
+        Test that get_de_novo_threshold gets correct threshold for an insertion
+        '''
+        assert excel.get_de_novo_threshold(self, self.variants[2]) == 0.02

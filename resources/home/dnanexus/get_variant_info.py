@@ -78,16 +78,21 @@ class VariantUtils():
             variant (dict): dict describing a single variant from JSON
         Outputs:
             highest_af: frequency of the variant in the population with
-            the highest allele frequency for the variant, or 0 if the variant
-            is not seen in any populations in the JSON
+            the highest allele frequency for the variant, or - if the variant
+            is not seen in any populations in the JSON, or - if there are no
+            reference populations.
         '''
         highest_af = 0
-        if variant['variantAttributes']['alleleFrequencies'] is not None:
+        if variant['variantAttributes']['alleleFrequencies'] is None:
+            highest_af = '-'
+        else:
             for af in variant['variantAttributes']['alleleFrequencies']:
                 if af['alternateFrequency'] > highest_af:
                     highest_af = af['alternateFrequency']
+            if highest_af == 0:
+                highest_af = '-'
 
-        return highest_af
+        return str(highest_af)
 
     @staticmethod
     def get_inheritance(variant, mother_idx, father_idx, p_sex):
@@ -226,13 +231,14 @@ class VariantUtils():
         var_dict["End"] = variant["coordinates"]["end"]
         var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
         var_dict["Type"] = "STR"
-        var_dict["Priority"] = "STR"
+        var_dict["Priority"] = "TIER1_STR"
         var_dict["Repeat"] = variant[
             "shortTandemRepeatReferenceData"
         ]["repeatedSequence"]
         var_dict["STR1"] = num_copies(variant, pb_idx, 0)
         var_dict["STR2"] = num_copies(variant, pb_idx, 1)
         var_dict["Gene"] = VariantUtils.get_gene_symbol(variant)
+        var_dict["AF Max"] = VariantUtils.get_af_max(variant)
         return var_dict
 
     @staticmethod
