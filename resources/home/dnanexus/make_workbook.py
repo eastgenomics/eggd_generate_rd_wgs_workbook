@@ -622,20 +622,6 @@ class excel():
             else:
                 summary_sheet[key] = 0
 
-    def get_de_novo_threshold(self, variant):
-        '''
-        The de novo quality score thresholds are different for indels or SNVs
-        This function works out if a variant is an indel based on having either
-        a ref or an alt sequence > 1
-        '''
-        if (len(variant["variantCoordinates"]["reference"]) > 1 or
-                len(variant["variantCoordinates"]["alternate"]) > 1):
-            threshold = self.config['denovo_quality_scores']['indel']
-        else:
-            threshold = self.config['denovo_quality_scores']['snv']
-
-        return threshold
-
     def create_additional_analysis_page(self):
         '''
         Get Tier3/Null SNVs for Exomiser/deNovo analysis
@@ -700,35 +686,32 @@ class excel():
             variant_list.append(var_dict)
 
         # Get variants with high de novo quality score (these are either SNVs
-        # or indels)
+        # or indels). These variants only appear in the JSON if the quality
+        # score is above the threshold
         for snv in self.wgs_data["interpretedGenomes"][
                 self.gel_index
             ]["interpretedGenomeData"]["variants"]:
             for event in snv["reportEvents"]:
-                if event['deNovoQualityScore'] is not None:
-                    if (
-                        event['deNovoQualityScore'] >
-                        self.get_de_novo_threshold(snv)
-                        ):
-                        event_index = snv["reportEvents"].index(event)
-                        var_dict = VariantUtils.get_snv_info(
+                if event['segregationPattern'] == 'deNovo':
+                    event_index = snv["reportEvents"].index(event)
+                    var_dict = VariantUtils.get_snv_info(
+                        snv,
+                        self.proband,
+                        event_index,
+                        self.column_list,
+                        self.mother,
+                        self.father,
+                        self.proband_sex
+                    )
+                    var_dict["Priority"] = "De novo"
+                    var_dict["Inheritance"] = "De novo"
+                    var_dict["HGVSc"], var_dict["HGVSp"] = (
+                        VariantNomenclature.get_hgvs_gel(
                             snv,
-                            self.proband,
-                            event_index,
-                            self.column_list,
-                            self.mother,
-                            self.father,
-                            self.proband_sex
-                        )
-                        var_dict["Priority"] = "De novo"
-                        var_dict["Inheritance"] = "De novo"
-                        var_dict["HGVSc"], var_dict["HGVSp"] = (
-                            VariantNomenclature.get_hgvs_gel(
-                                snv,
-                                self.mane,
-                                self.refseq_tsv)
-                        )
-                        variant_list.append(var_dict)
+                            self.mane,
+                            self.refseq_tsv)
+                    )
+                    variant_list.append(var_dict)
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
