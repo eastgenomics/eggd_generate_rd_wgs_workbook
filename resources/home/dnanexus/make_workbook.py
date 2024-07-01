@@ -719,6 +719,10 @@ class excel():
             # Get list of all columns except 'Priority' column
             col_except_priority = self.column_list
             col_except_priority.remove('Priority')
+            # Convert all df columns to object type to allow merging without
+            # conflicts
+            ex_df = ex_df.astype(object)
+            self.var_df = self.var_df.astype(object)
             # Merge exomiser df with tiered variants df, indicating if there
             # is a difference between Priority
             ex_df = ex_df.merge(
