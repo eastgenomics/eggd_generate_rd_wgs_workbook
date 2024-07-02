@@ -658,7 +658,13 @@ class excel():
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
-        to_report = VariantUtils.get_top_3_ranked(ranked)
+        # We only want Exomiser variants with a score >= 0.75, so we need to
+        # filter the list to keep only these
+        ranked_and_above_threshold = [
+            x for x in ranked if x['reportEvents']['score'] >= 0.75
+        ]
+
+        to_report = VariantUtils.get_top_3_ranked(ranked_and_above_threshold)
 
         for snv in to_report:
             # put reportevents dict within a list to allow it to have an index
