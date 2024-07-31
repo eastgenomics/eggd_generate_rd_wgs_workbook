@@ -497,18 +497,14 @@ class VariantNomenclature():
                 mane, cdna.split('(')[0]
             )
 
+            print(refseq)
+
             if refseq is not None:
                 ref_list.append(refseq + cdna.split(')')[1])
                 enst_list.append(cdna.split('(')[0])
 
-        # should not match more than one NM_ MANE transcript
-        if len(set(ref_list)) > 1:
-            raise RuntimeError(
-                f"Transcript {cdnas} matched more than one MANE transcript"
-            )
-
         # If no MANE match is found, return all transcripts
-        elif len(set(ref_list)) == 0:
+        if len(set(ref_list)) == 0:
             hgvs_c_list = []
             ensp_list = []
             for cdna in cdnas:
@@ -519,10 +515,13 @@ class VariantNomenclature():
             hgvs_p = ', '.join(ensp_list)
 
         else:
-            hgvs_c = list(set(ref_list))[0]
-            ensp = VariantNomenclature.get_ensp(refseq_tsv, enst_list[0])
-            for protein in protein_changes:
-                if ensp in protein:
-                    hgvs_p = protein
+            hgvs_c = ', '.join(list(set(ref_list)))
+            hgvs_p_list = []
+            for enst in enst_list:
+                ensp = VariantNomenclature.get_ensp(refseq_tsv, enst)
+                for protein in protein_changes:
+                    if ensp in protein:
+                        hgvs_p_list.append(protein)
+            hgvs_p = ', '.join(hgvs_p_list)
 
         return hgvs_c, hgvs_p

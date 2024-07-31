@@ -47,6 +47,8 @@ class excel():
         self.gel_index = None
         self.ex_index = None
         self.var_df = None
+        self.genome_format = None
+        self.genome_data_format = None
         self.column_list = [
             "Gene",
             "Chr",
@@ -86,6 +88,7 @@ class excel():
         print(f"Writing to {self.args.output_filename}...")
         # Write in workbook
         self.summary_page()
+        self.get_interpreted_genome_format()
         self.index_interpretation_services()
         self.create_gel_tiering_variant_page()
         self.create_additional_analysis_page()
@@ -117,7 +120,6 @@ class excel():
 
         with open(self.args.config) as fh:
             self.config = json.load(fh)
-
 
     def summary_page(self):
         '''
@@ -168,14 +170,17 @@ class excel():
         }
 
         self.summary_content = {
-            (1, 9): str(self.wgs_data["interpretation_flag"]),
-            (2, 2): self.wgs_data['referral']["clinical_indication_full_name"],
+            (1, 9): str(
+                self.wgs_data[
+                    "interpretation_request_data"
+                ]['json_request']['interpretationFlags']
+            ),
             (1, 2): self.wgs_data["family_id"],
-            (2, 9): self.wgs_data['referral']["clinical_indication_code"]
         }
 
         # Add panel data, penetrance data and data about family members
         self.get_panels()
+        self.get_clinical_interpretation()
         self.get_penetrance()
         self.person_data()
         if self.args.epic_clarity:
@@ -221,7 +226,9 @@ class excel():
         '''
         # Get HPO version from JSON
         obo = None
-        version = self.wgs_data['referral']['referral_data']["pedigree"][
+        version = self.wgs_data[
+                    "interpretation_request_data"
+                ]['json_request']["pedigree"][
             "members"
             ][0]["hpoTermList"][0]['hpoBuildNumber']
 
@@ -302,9 +309,9 @@ class excel():
         self.get_hpo_obo()
         pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
-        for member in self.wgs_data['referral']['referral_data']["pedigree"][
-            "members"
-            ]:
+        for member in self.wgs_data[
+                    "interpretation_request_data"
+                ]['json_request']["pedigree"]["members"]:
             if member["isProband"]:
                 self.add_person_data_to_summary(member, 6)
                 self.proband = member["participantId"]
@@ -315,11 +322,13 @@ class excel():
 
             elif pb_relate(member) == "Mother":
                 self.add_person_data_to_summary(member, 7)
-                self.mother = member["participantId"]
+                if not member["participantId"].starts_with('NR'):
+                    self.mother = member["participantId"]
 
             elif pb_relate(member) == "Father":
                 self.add_person_data_to_summary(member, 8)
-                self.father = member["participantId"]
+                if not member["participantId"].starts_with('NR'):
+                    self.father = member["participantId"]
 
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)
@@ -336,17 +345,16 @@ class excel():
             None, adds content to openpxyl workbook
         '''
         panels = []
-        for test in self.wgs_data['referral']['referral_data'][
-            'referralTests'
-            ]:
-            for panel in test['analysisPanels']:
-                panel_list = [
-                    panel['panelId'],
-                    panel['panelName'],
-                    panel['panelVersion'],
-                    panel['specificDisease']
-                ]
-                panels.append(panel_list)
+        for panel in self.wgs_data[
+                "interpretation_request_data"
+            ]['json_request']['pedigree']['analysisPanels']:
+            panel_list = [
+                panel['panelId'],
+                panel['panelName'],
+                panel['panelVersion'],
+                panel['specificDisease']
+            ]
+            panels.append(panel_list)
 
         end = 1 + int(len(panels))
         for i in range(1, end):
@@ -354,6 +362,23 @@ class excel():
             self.summary_content[(i+13, 2)] = panels[i-1][3]
             self.summary_content[(i+13, 3)] = panels[i-1][2]
             self.summary_content[(i+13, 4)] = panels[i-1][1]
+
+    def get_clinical_interpretation(self):
+        '''
+        If clinical interpretation exists in the JSON (it is absent from some
+        older ones), add it to the summary sheet
+        Inputs:
+            None
+        Outputs:
+            None, adds data to summary sheet.
+        '''
+        if self.wgs_data.get('referral') is not None:
+            self.summary_content[(2, 2)] = self.wgs_data['referral'][
+                "clinical_indication_full_name"
+            ]
+            self.summary_content[(2, 9)] =self.wgs_data['referral'][
+                "clinical_indication_code"
+            ]
 
     def get_penetrance(self):
         '''
@@ -364,11 +389,13 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         '''
-        for penetrance in self.wgs_data['referral']['referral_data'][
-            'pedigree'
-            ]['diseasePenetrances']:
-            if penetrance['specificDisease'] == self.summary_content[(2,2)]:
-                disease_penetrance = penetrance["penetrance"]
+        p_list = []
+        for penetrance in self.wgs_data[
+                    "interpretation_request_data"
+                ]['json_request']['pedigree']['diseasePenetrances']:
+            p_list.append(penetrance['penetrance'])
+
+        disease_penetrance = ', '.join(p_list)
 
         self.summary_content[(3, 2)] = disease_penetrance
 
@@ -469,6 +496,25 @@ class excel():
             p_sp, p_nuh = self.get_ids(df, p_idx)
         return p_sp, p_nuh
 
+    def get_interpreted_genome_format(self):
+        '''
+        There are two versions of the formatting for interpreted genomes fields
+        one is interpretedGenomes > interpretedGenomeData and the other is
+        interpreted_genome > interpreted_genome_data. This function finds out
+        which to use.
+        '''
+        if self.wgs_data.get('interpretedGenomes') is not None:
+            self.genome_format = 'interpretedGenomes'
+            self.genome_data_format = 'interpretedGenomeData'
+        elif self.wgs_data.get('interpreted_genome') is not None:
+            self.genome_format = 'interpreted_genome'
+            self.genome_data_format = 'interpreted_genome_data'
+        else:
+            raise RuntimeError(
+                "JSON does not have interpreted_genome or interpretedGenomes "
+                "field which is needed to pull out variants."
+            )
+
     def index_interpretation_services(self):
         '''
         The JSON contains two interpretation services: GEL tiering and Exomiser
@@ -480,18 +526,18 @@ class excel():
         Outputs:
             None, sets indexs for GEL tiering and exomiser in the JSON.
         '''
-        for interpretation in self.wgs_data["interpretedGenomes"]:
-            if interpretation['interpretedGenomeData'][
+        for interpretation in self.wgs_data[self.genome_format]:
+            if interpretation[self.genome_data_format][
                 'interpretationService'
                 ] == 'genomics_england_tiering':
                 self.gel_index = self.wgs_data[
-                    "interpretedGenomes"
+                    self.genome_format
                     ].index(interpretation)
-            elif interpretation['interpretedGenomeData'][
+            elif interpretation[self.genome_data_format][
                 'interpretationService'
                 ] == 'Exomiser':
                 self.ex_index = self.wgs_data[
-                    "interpretedGenomes"
+                    self.genome_format
                     ].index(interpretation)
             else:
                 raise RuntimeError(
@@ -526,16 +572,19 @@ class excel():
         Take variants from GEL tiering JSON and format into sheet in Excel
         workbook.
         Inputs:
-            None
+            genome_format (str): format of variant interpretation services
+            genome interpretations field from GEL JSON 
+            genome_data_format (str): format of variant interpretation services
+            genome interpretations data field from GEL JSON 
         Outputs:
             None, adds content to openpxyl workbook
         '''
         variant_list = []
 
         # SNVs
-        for snv in self.wgs_data["interpretedGenomes"][
+        for snv in self.wgs_data[self.genome_format][
             self.gel_index
-            ]["interpretedGenomeData"]["variants"]:
+            ][self.genome_data_format]["variants"]:
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
@@ -558,9 +607,9 @@ class excel():
                     variant_list.append(var_dict)
 
         # STRs
-        for s_t_r in self.wgs_data["interpretedGenomes"][
+        for s_t_r in self.wgs_data[self.genome_format][
             self.gel_index
-            ]["interpretedGenomeData"][
+            ][self.genome_data_format][
                 "shortTandemRepeats"
             ]:
             for event in s_t_r["reportEvents"]:
@@ -571,9 +620,9 @@ class excel():
                     variant_list.append(var_dict)
 
         # CNVs
-        for cnv in self.wgs_data["interpretedGenomes"][
+        for cnv in self.wgs_data[self.genome_format][
             self.gel_index
-            ]["interpretedGenomeData"]["structuralVariants"]:
+            ][self.genome_data_format]["structuralVariants"]:
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
                 # CNVs can be reported as Tier 1 or Tier A, GEL updated the
@@ -634,9 +683,9 @@ class excel():
         ranked = []
         # Look through Exomiser SNVs and return those that are ranked
         # 1, 2, or 3 and have a score >= 0.75
-        for snv in self.wgs_data["interpretedGenomes"][
+        for snv in self.wgs_data[self.genome_format][
                 self.ex_index
-            ]["interpretedGenomeData"]["variants"]:
+            ][self.genome_data_format]["variants"]:
             ev_to_look_at = []
             for event in snv["reportEvents"]:
                 # Filter out mitochondrial + untiered as these are likely
@@ -694,9 +743,9 @@ class excel():
         # Get variants with high de novo quality score (these are either SNVs
         # or indels). These variants only appear in the JSON if the quality
         # score is above the threshold
-        for snv in self.wgs_data["interpretedGenomes"][
+        for snv in self.wgs_data[self.genome_format][
                 self.gel_index
-            ]["interpretedGenomeData"]["variants"]:
+            ][self.genome_data_format]["variants"]:
             for event in snv["reportEvents"]:
                 if event['segregationPattern'] == 'deNovo':
                     event_index = snv["reportEvents"].index(event)

@@ -2,9 +2,12 @@
     "name": "eggd_generate_rd_wgs_workbook",
     "title": "eggd_generate_rd_wgs_workbook",
     "summary": "Creates an .xlsx workbook given a GEL WGS RD JSON",
-    "whatsNew": "* 1.0.0 Initial version",
+    "whatsNew": {
+      "1.0.0": "Initial version",
+      "1.0.1": "Bug fix to make compatible with older GEL JSONs"
+      },
     "dxapi": "1.0.0",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "inputSpec": [
       {
         "name": "json",
