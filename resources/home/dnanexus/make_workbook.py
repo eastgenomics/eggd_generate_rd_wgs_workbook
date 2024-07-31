@@ -322,12 +322,12 @@ class excel():
 
             elif pb_relate(member) == "Mother":
                 self.add_person_data_to_summary(member, 7)
-                if not member["participantId"].starts_with('NR'):
+                if not member["participantId"].startswith('NR'):
                     self.mother = member["participantId"]
 
             elif pb_relate(member) == "Father":
                 self.add_person_data_to_summary(member, 8)
-                if not member["participantId"].starts_with('NR'):
+                if not member["participantId"].startswith('NR'):
                     self.father = member["participantId"]
 
             else:
