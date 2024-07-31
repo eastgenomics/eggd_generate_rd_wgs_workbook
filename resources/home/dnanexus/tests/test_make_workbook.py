@@ -24,10 +24,7 @@ class TestWorkbook():
                     "members": [
                         {
                             "hpoTermList": [
-                                {
-                                    "term": "HP:00000",
-                                    "hpoBuildNumber": "vXXXXXX"
-                                }
+                                {"hpoBuildNumber": "vXXXXXX"}
                             ]
                         }
                     ],
