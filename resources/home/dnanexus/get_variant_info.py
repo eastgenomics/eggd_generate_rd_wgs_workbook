@@ -497,8 +497,6 @@ class VariantNomenclature():
                 mane, cdna.split('(')[0]
             )
 
-            print(refseq)
-
             if refseq is not None:
                 ref_list.append(refseq + cdna.split(')')[1])
                 enst_list.append(cdna.split('(')[0])

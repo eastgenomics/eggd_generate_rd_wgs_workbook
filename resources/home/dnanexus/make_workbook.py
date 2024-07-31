@@ -502,6 +502,11 @@ class excel():
         one is interpretedGenomes > interpretedGenomeData and the other is
         interpreted_genome > interpreted_genome_data. This function finds out
         which to use.
+        Inputs:
+            None
+        Outputs:
+            None, sets self.genome_format and self.genome_data_format for use
+            in creating variant pages
         '''
         if self.wgs_data.get('interpretedGenomes') is not None:
             self.genome_format = 'interpretedGenomes'
@@ -572,10 +577,7 @@ class excel():
         Take variants from GEL tiering JSON and format into sheet in Excel
         workbook.
         Inputs:
-            genome_format (str): format of variant interpretation services
-            genome interpretations field from GEL JSON 
-            genome_data_format (str): format of variant interpretation services
-            genome interpretations data field from GEL JSON 
+            None
         Outputs:
             None, adds content to openpxyl workbook
         '''
