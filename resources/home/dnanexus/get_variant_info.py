@@ -195,8 +195,8 @@ class VariantUtils():
 
             if index is None:
                 raise RuntimeError(
-                    f"Unable to find proband ID {participant_id} in variant"
-                    f"{variant['variantCalls']}"
+                    f"Unable to find participant ID {participant_id} in "
+                    f"variant {variant['variantCalls']}"
                 )
 
         return index
