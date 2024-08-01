@@ -16,9 +16,10 @@ class TestWorkbook():
     '''
     Tests for excel() class in make_workbook script
     '''
+    summary_content = {}
     wgs_data = {
-        "referral": {
-            "referral_data": {
+        "interpretation_request_data": {
+            "json_request": {
                 "pedigree": {
                     "members": [
                         {
@@ -36,17 +37,16 @@ class TestWorkbook():
                             'penetrance': 'incomplete',
                             'specificDisease': 'OtherDisease'                   
                         }
+                    ],
+                    'analysisPanels': [
+                        {
+                            'panelId': "486",
+                            'panelName': "286",
+                            'specificDisease': 'Disease',
+                            'panelVersion': "2.2"
+                        }
                     ]
-                },
-                'referralTests': [{
-                'analysisPanels': [
-                        {'panelId': "486",
-                        'panelName': "286",
-                        'specificDisease': 'Disease',
-                        'panelVersion': "2.2"}
-                        ]
-                    }
-                ]
+                }
             }
         }
     }
@@ -55,7 +55,6 @@ class TestWorkbook():
         '''
         Check that panels are extracted from JSON as expected.
         '''
-        self.summary_content = {}
         excel.get_panels(self)
         assert self.summary_content == {
             (14, 1): '486', (14, 2): 'Disease', (14, 3): '2.2', (14, 4): '286'
@@ -64,17 +63,21 @@ class TestWorkbook():
     def test_get_penetrance(self):
         '''
         Check that penetrance is extracted from JSON as expected, and matched
-        to the specific disease in the referral
+        to the specific disease(s) in the referral
         '''
-        self.summary_content = {(2,2): 'Disease'}
         excel.get_penetrance(self)
-        assert self.summary_content[(3,2)] == "complete"
+        assert self.summary_content[(3,2)] == "complete, incomplete"
 
 
 class TestInterpretationService():
     '''
     Test that the function to find interpretation service works as expected
     '''
+    genome_format = None
+    genome_data_format = None
+    ex_index = None
+    gel_index = None
+
     wgs_data = {
         'interpretedGenomes': [
             {'interpretedGenomeData': {
@@ -83,12 +86,28 @@ class TestInterpretationService():
             {'interpretedGenomeData': {'interpretationService': 'Exomiser'}}
         ]
     }
+
+    def test_that_camelcase_format_is_found(self):
+        '''
+        Test that the function get_interpreted_genome_format returns the
+        correct genome_format and genome_data_format for camelcase fields in
+        JSON
+        '''
+        excel.get_interpreted_genome_format(self)
+
+        assert (
+            self.genome_format == 'interpretedGenomes' and
+            self.genome_data_format == 'interpretedGenomeData'
+        )
+
     def test_indexing_of_interpretation_service(self):
         '''
         Test that indexes are correctly found. GEL tiering is the first in the
         list, so should be indexed at 0, and Exomiser is second, so should be
         indexed at 1
         '''
+        self.genome_format = 'interpretedGenomes'
+        self.genome_data_format = 'interpretedGenomeData'
         excel.index_interpretation_services(self)
         assert self.ex_index == 1 and self.gel_index == 0
 
@@ -97,6 +116,8 @@ class TestInterpretationService():
         Error should be raised if neither genomics_england_tiering' or
         'Exomiser' given as interpretation service
         '''
+        self.genome_format = 'interpretedGenomes'
+        self.genome_data_format = 'interpretedGenomeData'
         self.wgs_data["interpretedGenomes"][0]['interpretedGenomeData'][
                 'interpretationService'
                 ] = 'invalid_service'
@@ -157,7 +178,7 @@ class TestVariantInfo():
                 }
             ]
         }}
-        assert VariantUtils.get_af_max(variant) == 0.001
+        assert VariantUtils.get_af_max(variant) == '0.001'
 
 
 class TestIndexParticipant():
