@@ -672,7 +672,7 @@ class excel():
                 else:
                     summary_sheet[key] = 0
 
-        # if df is empty add 0 counts for each variant type to summary page
+        # if df is empty add 0 counts for each variant type to summary sheet
         else:
             for cell in count_dict.keys():
                 summary_sheet[cell] = 0
