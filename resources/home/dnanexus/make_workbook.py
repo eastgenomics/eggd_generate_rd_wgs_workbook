@@ -640,24 +640,8 @@ class excel():
         # Add all variants into dataframe
         self.var_df = pd.DataFrame(variant_list)
         self.var_df = self.var_df.drop_duplicates()
-        self.var_df['Depth'] = self.var_df['Depth'].astype(object)
 
-        # if df is not empty
-        if not self.var_df.empty:
-            # if both Tier 1 and Tier 2, keep Tier 1 entry only
-            self.var_df = self.var_df.sort_values(
-                by=['Priority']
-                ).drop_duplicates(subset=['Chr', 'Pos', 'Ref', 'Alt', 'End'])
-            # Sort by Priority and then Gene symbol
-            self.var_df = self.var_df.sort_values(['Priority', 'Gene'])
-            self.var_df.to_excel(
-                self.writer, sheet_name="Variants", index=False
-            )
-
-        # Set column widths
-        ExcelStyles.resize_variant_columns(self, self.workbook["Variants"])
-
-        # Add counts to summary sheet
+        # Prepare to add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         count_dict = {
             'B22': "TIER1_SNV",
@@ -665,13 +649,40 @@ class excel():
             'B24': "TIER1_CNV",
             'B25': "TIER1_STR",
         }
-        for key, val in count_dict.items():
-            if val in self.var_df.Priority.values:
-                summary_sheet[key] = self.var_df[
-                    'Priority'
-                ].value_counts()[val]
-            else:
-                summary_sheet[key] = 0
+
+        # if df is not empty, sort and add counts of each variant type to
+        # summary sheet
+        if not self.var_df.empty:
+            self.var_df['Depth'] = self.var_df['Depth'].astype(object)
+
+            # if variant is in both Tier 1 and Tier 2, keep Tier 1 entry only
+            self.var_df = self.var_df.sort_values(
+                by=['Priority']
+                ).drop_duplicates(subset=['Chr', 'Pos', 'Ref', 'Alt', 'End'])
+
+            # Sort by Priority and then Gene symbol
+            self.var_df = self.var_df.sort_values(['Priority', 'Gene'])
+
+            # Add variant counts to summary sheet
+            for key, val in count_dict.items():
+                if val in self.var_df.Priority.values:
+                    summary_sheet[key] = self.var_df[
+                        'Priority'
+                    ].value_counts()[val]
+                else:
+                    summary_sheet[key] = 0
+
+        # if df is empty add 0 counts for each variant type to summary sheet
+        else:
+            for cell in count_dict.keys():
+                summary_sheet[cell] = 0
+
+        self.var_df.to_excel(
+            self.writer, sheet_name="Variants", index=False
+        )
+
+        # Set column widths
+        ExcelStyles.resize_variant_columns(self, self.workbook["Variants"])
 
     def create_additional_analysis_page(self):
         '''
@@ -772,7 +783,7 @@ class excel():
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
-        if not ex_df.empty:
+        if not ex_df.empty and not self.var_df.empty:
             # Get list of all columns except 'Priority' column
             col_except_priority = self.column_list
             col_except_priority.remove('Priority')
