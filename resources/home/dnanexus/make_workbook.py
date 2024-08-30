@@ -726,9 +726,7 @@ class excel():
             x for x in ranked if x['reportEvents']['score'] >= 0.75
         ]
 
-        to_report = VariantUtils.get_top_3_ranked(ranked_and_above_threshold)
-
-        for snv in to_report:
+        for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
             snv['reportEvents'] = [snv['reportEvents']]
             # event index will always be 0 as we have made it so there is only
@@ -784,30 +782,44 @@ class excel():
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
         if not ex_df.empty and not self.var_df.empty:
-            # Get list of all columns except 'Priority' column
-            col_except_priority = self.column_list
-            col_except_priority.remove('Priority')
             # Convert all df columns to object type to allow merging without
             # conflicts
             ex_df = ex_df.astype(object)
             self.var_df = self.var_df.astype(object)
-            # Merge exomiser df with tiered variants df, indicating if there
-            # is a difference between Priority
-            ex_df = ex_df.merge(
+            merge_df = ex_df.merge(
                 self.var_df,
-                left_on=col_except_priority,
-                right_on=col_except_priority,
-                indicator='_merge',
-                how='outer'
+                on=["Chr", 'Pos', 'Ref', 'Alt'],
+                how='left',
+                indicator=True
             )
             # Keep left only == keep only those that are in exomiser df and
             # not in tiered df
-            ex_df = ex_df[ex_df['_merge'] == 'left_only']
-            # Clean up merge columns (drop _merge, and priority_y, rename
-            # priority_x)
-            ex_df = ex_df.drop(labels=['_merge'], axis='columns')
-            ex_df = ex_df.rename(columns={'Priority_x': 'Priority'})
-            ex_df = ex_df.drop(labels=['Priority_y'], axis='columns')
+            merge_df = merge_df[merge_df['_merge'] == 'left_only']
+            # Clean up merge columns (drop _merge columns ending _y, rename
+            # columns ending _x)
+            d = {}
+            for col in self.var_df.columns:
+                d[col + '_x'] = col
+            merge_df = merge_df.rename(columns=d)
+            merge_df = merge_df.drop(columns=['_merge'])
+            ex_df = merge_df[merge_df.columns.drop(
+                list(merge_df.filter(regex='.*\_y'))
+            )]
+
+        if not ex_df.empty:
+            # Now we have filtered out all variants that are in the GEL tiering
+            # page we need to get the top 3 ranks in the exomiser df
+            ex_df = ex_df.reset_index()
+            # Get dict of {index: int(exomiser rank)}
+            ranks = ex_df['Priority'].to_dict()
+            for k,v in ranks.items():
+                ranks[k] = int(v.split(' ')[-1].split('.')[0])
+            # Get indices of top ranked variants
+            top_ranked_indices = VariantUtils.get_top_3_ranked(ranks)
+            # Keep only top ranked variants + drop col with prev indices
+            ex_df = ex_df.iloc[top_ranked_indices]
+            ex_df = ex_df.drop(columns=['index'])
+
             # Sort df by priority first, and then gene name
             ex_df = ex_df.sort_values(['Priority', 'Gene'])
 

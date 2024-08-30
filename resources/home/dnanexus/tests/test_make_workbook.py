@@ -226,38 +226,21 @@ class TestRanking():
     '''
     Tests for ranking function
     '''
-    snvs = [
-        {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
-    ]
+    snvs = {0: 1, 1: 2, 2: 3, 3: 3, 4: 4}
 
     def test_can_handle_two_bronze(self):
         '''
-        Check both third ranked items are returned.
+        Check indices both third ranked items are returned.
         '''
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [
-            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
-        ]
+        assert VariantUtils.get_top_3_ranked(self.snvs) == [0, 1, 2, 3]
 
     def test_next_ranked_returned_if_no_items_at_rank(self):
         '''
-        Check that third and forth ranked items are returned if there is no
-        second ranked item
+        Check that indices for the third and forth ranked items are returned if
+        there is no second ranked item
         '''
-        self.snvs[1] = {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [
-            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
-        ]
+        self.snvs[1] = 3
+        assert VariantUtils.get_top_3_ranked(self.snvs) == [0, 1, 2, 3, 4]
 
 
 class TestVariantNomenclature():

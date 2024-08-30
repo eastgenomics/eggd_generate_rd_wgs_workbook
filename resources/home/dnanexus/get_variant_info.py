@@ -337,46 +337,50 @@ class VariantUtils():
         ranked variants. It will return all variants at each rank; so all the
         first ranked, all the second ranked and all the third ranked variants.
         Inputs
-            ranked (list): list of Exomiser variants
+            ranked (dict): dict of indices and Exomiser ranks from exomiser df
         Outputs:
-            to_report (list): top three Exomiser variants to report back
+            top (list): df indices of variants in the top three Exomiser ranks
         '''
         gold = []
         silver = []
         bronze = []
+        top = []
 
-        rank = lambda x: x['reportEvents']['vendorSpecificScores']['rank']
+        ordered_list = dict(sorted(ranked.items(), key=lambda item: item[1]))
 
-        ordered_list = sorted(ranked, key=rank)
-
-        for snv in ordered_list:
+        for k, v in ordered_list.items():
             if not gold:
-                gold.append(snv)
+                gold.append(v)
+                top.append(k)
                 continue
             else:
-                if rank(snv) == rank(gold[0]):
-                    gold.append(snv)
+                if v == gold[0]:
+                    gold.append(v)
+                    top.append(k)
                     continue
 
             if not silver:
-                silver.append(snv)
+                silver.append(v)
+                top.append(k)
                 continue
             else:
-                if rank(snv) == rank(silver[0]):
-                    silver.append(snv)
+                if v == silver[0]:
+                    silver.append(v)
+                    top.append(k)
                     continue
 
             if not bronze:
-                bronze.append(snv)
+                bronze.append(v)
+                top.append(k)
                 continue
             else:
-                if rank(snv) == rank(bronze[0]):
-                    bronze.append(snv)
+                if v == bronze[0]:
+                    bronze.append(v)
+                    top.append(k)
                     continue
                 else:
                     break
-
-        return gold + silver + bronze
+        return top
 
 
 class VariantNomenclature():
