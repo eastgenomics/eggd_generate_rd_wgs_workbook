@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - DI-1112_exomiser-ranking-fix
   pull_request:
     branches:
       - main
