@@ -337,8 +337,8 @@ class VariantUtils():
         ranked variants. It will return all variants at each rank; so all the
         first ranked, all the second ranked and all the third ranked variants.
         Inputs
-            ranked (dict): dict of indices within the df and Exomiser ranks
-            from exomiser df
+            ranked (dict): dict of indices within the df and integer denoting
+            Exomiser rank for the variant at that index
             e.g. {1: 1, 2: 3, 3: 5, 4: 5, 5: 7}
         Outputs:
             top (list): df indices of variants in the top three Exomiser ranks
