@@ -337,7 +337,9 @@ class VariantUtils():
         ranked variants. It will return all variants at each rank; so all the
         first ranked, all the second ranked and all the third ranked variants.
         Inputs
-            ranked (dict): dict of indices and Exomiser ranks from exomiser df
+            ranked (dict): dict of indices within the df and Exomiser ranks
+            from exomiser df
+            e.g. {1: 1, 2: 3, 3: 5, 4: 5, 5: 7}
         Outputs:
             top (list): df indices of variants in the top three Exomiser ranks
         '''
@@ -346,9 +348,13 @@ class VariantUtils():
         bronze = []
         top = []
 
-        ordered_list = dict(sorted(ranked.items(), key=lambda item: item[1]))
+        # order the dictionary by rank, so the highest rank appears first
+        # then use this to loop through the dictionary and keep the first
+        # variant at each rank and any subsequent variant that has the same
+        # rank, for each of the top three ranks.
+        ordered = dict(sorted(ranked.items(), key=lambda item: item[1]))
 
-        for k, v in ordered_list.items():
+        for k, v in ordered.items():
             if not gold:
                 gold.append(v)
                 top.append(k)

@@ -790,17 +790,13 @@ class excel():
                 self.var_df,
                 on=["Chr", 'Pos', 'Ref', 'Alt'],
                 how='left',
-                indicator=True
+                indicator=True,
+                suffixes=[None, "_y"]
             )
             # Keep left only == keep only those that are in exomiser df and
             # not in tiered df
             merge_df = merge_df[merge_df['_merge'] == 'left_only']
-            # Clean up merge columns (drop _merge columns ending _y, rename
-            # columns ending _x)
-            d = {}
-            for col in self.var_df.columns:
-                d[col + '_x'] = col
-            merge_df = merge_df.rename(columns=d)
+            # Clean up df by dropping merge column and columns ending _y
             merge_df = merge_df.drop(columns=['_merge'])
             ex_df = merge_df[merge_df.columns.drop(
                 list(merge_df.filter(regex='.*\_y'))
@@ -810,7 +806,8 @@ class excel():
             # Now we have filtered out all variants that are in the GEL tiering
             # page we need to get the top 3 ranks in the exomiser df
             ex_df = ex_df.reset_index()
-            # Get dict of {index: int(exomiser rank)}
+            # Create dict of {df index: int(exomiser rank)} by removing the
+            # Exomiser Rank prefix from each rank in the df
             ranks = ex_df['Priority'].to_dict()
             for k,v in ranks.items():
                 ranks[k] = int(v.split(' ')[-1].split('.')[0])
