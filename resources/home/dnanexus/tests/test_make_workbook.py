@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import pandas as pd
 import pytest
 import os
 import obonet
@@ -226,38 +227,35 @@ class TestRanking():
     '''
     Tests for ranking function
     '''
-    snvs = [
-        {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-        {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
-    ]
+    ranks = [1, 2, 3, 3, 4]
+    str_ranks = [f"Exomiser Rank {str(x)}" for x in ranks]
+    df = pd.DataFrame({'Priority': str_ranks})
+    print(df)
 
     def test_can_handle_two_bronze(self):
         '''
-        Check both third ranked items are returned.
+        Check indices both third ranked items are returned.
         '''
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [
-            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 2}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
-        ]
+        correct_ranks = self.str_ranks[:-1]
+
+        pd.testing.assert_frame_equal(
+            VariantUtils.get_top_3_ranked(self.df),
+            pd.DataFrame({'Priority': correct_ranks})
+        )
 
     def test_next_ranked_returned_if_no_items_at_rank(self):
         '''
-        Check that third and forth ranked items are returned if there is no
-        second ranked item
+        Check that indices for the third and forth ranked items are returned if
+        there is no second ranked item
         '''
-        self.snvs[1] = {'reportEvents': {'vendorSpecificScores': {'rank': 3}}}
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [
-            {'reportEvents': {'vendorSpecificScores': {'rank': 1}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 3}}},
-            {'reportEvents': {'vendorSpecificScores': {'rank': 4}}}
-        ]
+        self.str_ranks.pop(1)
+        self.df = self.df.drop([1])
+
+        pd.testing.assert_frame_equal(
+            VariantUtils.get_top_3_ranked(self.df).reset_index(drop=True),
+            pd.DataFrame({'Priority': self.str_ranks}).reset_index(drop=True)
+        )
+
 
 
 class TestVariantNomenclature():

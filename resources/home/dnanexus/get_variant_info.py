@@ -1,6 +1,5 @@
 import re
 
-
 class VariantUtils():
     '''
     Functions to get variant data to be added to the excel spreadsheet
@@ -329,54 +328,31 @@ class VariantUtils():
         return var_dict
 
     @staticmethod
-    def get_top_3_ranked(ranked):
+    def get_top_3_ranked(df):
         '''
-        Get top 3 ranked Exomiser variants; this function uses a podium format
-        so that equal ranks can be reported back.
-        Uses gold, silver and bronze to refer to the top, second and third
-        ranked variants. It will return all variants at each rank; so all the
-        first ranked, all the second ranked and all the third ranked variants.
+        Filter a df to return a df of the top 3 ranked Exomiser variants; this
+        function uses a podium format so that equal ranks can be reported back.
+        It will return all variants at each rank; so all the first ranked, all
+        the second ranked and all the third ranked variants.
         Inputs
-            ranked (list): list of Exomiser variants
+            df (pd.Dataframe): variant dataframe with a column containing
+            strings of the exomiser ranks in the format "Exomiser Rank #"
         Outputs:
-            to_report (list): top three Exomiser variants to report back
+            df (pd.Dataframe): filtered variant dataframe containing only
+            variants in the top three ranks
         '''
-        gold = []
-        silver = []
-        bronze = []
+        # First change "Exomiser Rank #" string to int
+        df['priority_as_int'] = df['Priority'].map(
+            lambda x: int(x.split(' ')[-1])
+        )
+        # Get unique ranks and sort, selecting the top three ranks
+        unique_ranks = df['priority_as_int'].unique()
+        top_3_ranks = sorted(unique_ranks)[:3]
 
-        rank = lambda x: x['reportEvents']['vendorSpecificScores']['rank']
-
-        ordered_list = sorted(ranked, key=rank)
-
-        for snv in ordered_list:
-            if not gold:
-                gold.append(snv)
-                continue
-            else:
-                if rank(snv) == rank(gold[0]):
-                    gold.append(snv)
-                    continue
-
-            if not silver:
-                silver.append(snv)
-                continue
-            else:
-                if rank(snv) == rank(silver[0]):
-                    silver.append(snv)
-                    continue
-
-            if not bronze:
-                bronze.append(snv)
-                continue
-            else:
-                if rank(snv) == rank(bronze[0]):
-                    bronze.append(snv)
-                    continue
-                else:
-                    break
-
-        return gold + silver + bronze
+        # filter the df to include only values in top three ranks
+        df = df[df['priority_as_int'].isin(top_3_ranks)]
+        df.drop(['priority_as_int'], axis=1, inplace=True)
+        return df
 
 
 class VariantNomenclature():
