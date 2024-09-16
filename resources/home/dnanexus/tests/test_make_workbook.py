@@ -228,7 +228,7 @@ class TestRanking():
     Tests for ranking function
     '''
     ranks = [1, 2, 3, 3, 4]
-    str_ranks = [f"Exomiser Rank {str(x)}.0" for x in ranks]
+    str_ranks = [f"Exomiser Rank {str(x)}" for x in ranks]
     df = pd.DataFrame({'Priority': str_ranks})
     print(df)
 
@@ -236,7 +236,7 @@ class TestRanking():
         '''
         Check indices both third ranked items are returned.
         '''
-        correct_ranks = [f"Exomiser Rank {str(x)}" for x in self.ranks[:-1]]
+        correct_ranks = self.str_ranks[:-1]
 
         pd.testing.assert_frame_equal(
             VariantUtils.get_top_3_ranked(self.df),
@@ -248,12 +248,12 @@ class TestRanking():
         Check that indices for the third and forth ranked items are returned if
         there is no second ranked item
         '''
-        self.ranks.pop(1)
-        correct_ranks = [f"Exomiser Rank {str(x)}" for x in self.ranks]
+        self.str_ranks.pop(1)
         self.df = self.df.drop([1])
+
         pd.testing.assert_frame_equal(
             VariantUtils.get_top_3_ranked(self.df).reset_index(drop=True),
-            pd.DataFrame({'Priority': correct_ranks}).reset_index(drop=True)
+            pd.DataFrame({'Priority': self.str_ranks}).reset_index(drop=True)
         )
 
 

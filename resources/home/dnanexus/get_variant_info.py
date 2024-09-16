@@ -1,5 +1,5 @@
 import re
-
+import pandas as pd
 
 class VariantUtils():
     '''
@@ -342,24 +342,18 @@ class VariantUtils():
             df (pd.Dataframe): filtered variant dataframe containing only
             variants in the top three ranks
         '''
-        # Create df copy to modify avoid the SettingWithCopyWarning
-        df = df.copy()
         # First change "Exomiser Rank #" string to int
-        df['Priority'] = df['Priority'].map(
-            lambda x: int(x.split(' ')[-1].split('.')[0])
+        df['priority_as_int'] = df['Priority'].map(
+            lambda x: int(x.split(' ')[-1])
         )
         # Get unique ranks and sort, selecting the top three ranks
-        unique_ranks = df['Priority'].unique()
+        unique_ranks = df['priority_as_int'].unique()
         top_3_ranks = sorted(unique_ranks)[:3]
 
         # filter the df to include only values in top three ranks
-        df = df[df['Priority'].isin(top_3_ranks)]
-
-        # Change int values back to "Exomiser Rank #" str
-        df = df.copy()
-        df['Priority'] = df['Priority'].map(
-            lambda x: f"Exomiser Rank {str(x)}"
-        )
+        df = df[df['priority_as_int'].isin(top_3_ranks)]
+        df.drop(['priority_as_int'], axis=1, inplace=True)
+        print(pd.__version__) 
         return df
 
 

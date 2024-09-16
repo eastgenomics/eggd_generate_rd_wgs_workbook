@@ -732,7 +732,6 @@ class excel():
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
-            rank = snv['reportEvents'][0]['vendorSpecificScores']['rank']
             var_dict = VariantUtils.get_snv_info(
                 snv,
                 self.proband,
@@ -742,6 +741,7 @@ class excel():
                 self.father,
                 self.proband_sex
             )
+            rank = int(snv['reportEvents'][0]['vendorSpecificScores']['rank'])
             var_dict["Priority"] = f"Exomiser Rank {rank}"
             var_dict["HGVSc"], var_dict["HGVSp"] = (
                 VariantNomenclature.get_hgvs_exomiser(
