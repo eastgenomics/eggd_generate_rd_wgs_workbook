@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import pandas as pd
 import pytest
 import os
 import obonet
@@ -226,21 +227,35 @@ class TestRanking():
     '''
     Tests for ranking function
     '''
-    snvs = {0: 1, 1: 2, 2: 3, 3: 3, 4: 4}
+    ranks = [1, 2, 3, 3, 4]
+    str_ranks = [f"Exomiser Rank {str(x)}.0" for x in ranks]
+    df = pd.DataFrame({'Priority': str_ranks})
+    print(df)
 
     def test_can_handle_two_bronze(self):
         '''
         Check indices both third ranked items are returned.
         '''
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [0, 1, 2, 3]
+        correct_ranks = [f"Exomiser Rank {str(x)}" for x in self.ranks[:-1]]
+
+        pd.testing.assert_frame_equal(
+            VariantUtils.get_top_3_ranked(self.df),
+            pd.DataFrame({'Priority': correct_ranks})
+        )
 
     def test_next_ranked_returned_if_no_items_at_rank(self):
         '''
         Check that indices for the third and forth ranked items are returned if
         there is no second ranked item
         '''
-        self.snvs[1] = 3
-        assert VariantUtils.get_top_3_ranked(self.snvs) == [0, 1, 2, 3, 4]
+        self.ranks.pop(1)
+        correct_ranks = [f"Exomiser Rank {str(x)}" for x in self.ranks]
+        self.df = self.df.drop([1])
+        pd.testing.assert_frame_equal(
+            VariantUtils.get_top_3_ranked(self.df).reset_index(drop=True),
+            pd.DataFrame({'Priority': correct_ranks}).reset_index(drop=True)
+        )
+
 
 
 class TestVariantNomenclature():
