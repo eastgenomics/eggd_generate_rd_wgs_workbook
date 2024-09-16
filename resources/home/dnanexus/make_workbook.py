@@ -805,17 +805,7 @@ class excel():
         if not ex_df.empty:
             # Now we have filtered out all variants that are in the GEL tiering
             # page we need to get the top 3 ranks in the exomiser df
-            ex_df = ex_df.reset_index()
-            # Create dict of {df index: int(exomiser rank)} by removing the
-            # Exomiser Rank prefix from each rank in the df
-            ranks = ex_df['Priority'].to_dict()
-            for k,v in ranks.items():
-                ranks[k] = int(v.split(' ')[-1].split('.')[0])
-            # Get indices of top ranked variants
-            top_ranked_indices = VariantUtils.get_top_3_ranked(ranks)
-            # Keep only top ranked variants + drop col with prev indices
-            ex_df = ex_df.iloc[top_ranked_indices]
-            ex_df = ex_df.drop(columns=['index'])
+            ex_df = VariantUtils.get_top_3_ranked(ex_df)
 
             # Sort df by priority first, and then gene name
             ex_df = ex_df.sort_values(['Priority', 'Gene'])

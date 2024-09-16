@@ -329,64 +329,38 @@ class VariantUtils():
         return var_dict
 
     @staticmethod
-    def get_top_3_ranked(ranked):
+    def get_top_3_ranked(df):
         '''
-        Get top 3 ranked Exomiser variants; this function uses a podium format
-        so that equal ranks can be reported back.
-        Uses gold, silver and bronze to refer to the top, second and third
-        ranked variants. It will return all variants at each rank; so all the
-        first ranked, all the second ranked and all the third ranked variants.
+        Filter a df to return a df of the top 3 ranked Exomiser variants; this
+        function uses a podium format so that equal ranks can be reported back.
+        It will return all variants at each rank; so all the first ranked, all
+        the second ranked and all the third ranked variants.
         Inputs
-            ranked (dict): dict of indices within the df and integer denoting
-            Exomiser rank for the variant at that index
-            e.g. {1: 1, 2: 3, 3: 5, 4: 5, 5: 7}
+            df (pd.Dataframe): variant dataframe with a column containing
+            strings of the exomiser ranks in the format "Exomiser Rank #"
         Outputs:
-            top (list): df indices of variants in the top three Exomiser ranks
+            df (pd.Dataframe): filtered variant dataframe containing only
+            variants in the top three ranks
         '''
-        gold = []
-        silver = []
-        bronze = []
-        top = []
+        # Create df copy to modify avoid the SettingWithCopyWarning
+        df = df.copy()
+        # First change "Exomiser Rank #" string to int
+        df['Priority'] = df['Priority'].map(
+            lambda x: int(x.split(' ')[-1].split('.')[0])
+        )
+        # Get unique ranks and sort, selecting the top three ranks
+        unique_ranks = df['Priority'].unique()
+        top_3_ranks = sorted(unique_ranks)[:3]
 
-        # order the dictionary by rank, so the highest rank appears first
-        # then use this to loop through the dictionary and keep the first
-        # variant at each rank and any subsequent variant that has the same
-        # rank, for each of the top three ranks.
-        ordered = dict(sorted(ranked.items(), key=lambda item: item[1]))
+        # filter the df to include only values in top three ranks
+        df = df[df['Priority'].isin(top_3_ranks)]
 
-        for k, v in ordered.items():
-            if not gold:
-                gold.append(v)
-                top.append(k)
-                continue
-            else:
-                if v == gold[0]:
-                    gold.append(v)
-                    top.append(k)
-                    continue
-
-            if not silver:
-                silver.append(v)
-                top.append(k)
-                continue
-            else:
-                if v == silver[0]:
-                    silver.append(v)
-                    top.append(k)
-                    continue
-
-            if not bronze:
-                bronze.append(v)
-                top.append(k)
-                continue
-            else:
-                if v == bronze[0]:
-                    bronze.append(v)
-                    top.append(k)
-                    continue
-                else:
-                    break
-        return top
+        # Change int values back to "Exomiser Rank #" str
+        df = df.copy()
+        df['Priority'] = df['Priority'].map(
+            lambda x: f"Exomiser Rank {str(x)}"
+        )
+        return df
 
 
 class VariantNomenclature():
