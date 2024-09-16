@@ -312,10 +312,10 @@ class excel():
         for member in self.wgs_data[
                     "interpretation_request_data"
                 ]['json_request']["pedigree"]["members"]:
-            
-            # Ignore participants starting NR, they have no sequence data
+
+            # Ignore participants starting NR, as they have no sequence data
             if member["participantId"].startswith('NR'):
-                break
+                continue
 
             if member["isProband"]:
                 self.add_person_data_to_summary(member, 6)
