@@ -1,5 +1,4 @@
 import re
-import pandas as pd
 
 class VariantUtils():
     '''
@@ -353,7 +352,6 @@ class VariantUtils():
         # filter the df to include only values in top three ranks
         df = df[df['priority_as_int'].isin(top_3_ranks)]
         df.drop(['priority_as_int'], axis=1, inplace=True)
-        print(pd.__version__) 
         return df
 
 
