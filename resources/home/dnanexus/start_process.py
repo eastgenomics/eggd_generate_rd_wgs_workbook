@@ -62,7 +62,7 @@ class SortArgs():
         )
         parser.add_argument(
             '--panels',
-            help='Epic Clarity export'
+            help='JSON file mapping panel ID to panel name and test code'
         )
         return parser.parse_args()
 
