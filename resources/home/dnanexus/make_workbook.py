@@ -66,7 +66,7 @@ class excel():
             "HGVSp",
             "Priority",
             "Zygosity",
-            "Inheritance mode",
+            "Panel MOI",
             "Inheritance",
             "Depth",
             "AF Max",
@@ -312,6 +312,11 @@ class excel():
         for member in self.wgs_data[
                     "interpretation_request_data"
                 ]['json_request']["pedigree"]["members"]:
+
+            # Ignore participants starting NR, as they have no sequence data
+            if member["participantId"].startswith('NR'):
+                continue
+
             if member["isProband"]:
                 self.add_person_data_to_summary(member, 6)
                 self.proband = member["participantId"]
@@ -322,13 +327,11 @@ class excel():
 
             elif pb_relate(member) == "Mother":
                 self.add_person_data_to_summary(member, 7)
-                if not member["participantId"].startswith('NR'):
-                    self.mother = member["participantId"]
+                self.mother = member["participantId"]
 
             elif pb_relate(member) == "Father":
                 self.add_person_data_to_summary(member, 8)
-                if not member["participantId"].startswith('NR'):
-                    self.father = member["participantId"]
+                self.father = member["participantId"]
 
             else:
                 self.summary_content[(9, 1)] = pb_relate(member)

@@ -282,7 +282,7 @@ class VariantUtils():
         var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
             "penetrance"
         ]
-        var_dict["Inheritance mode"] = VariantUtils.convert_moi(
+        var_dict["Panel MOI"] = VariantUtils.convert_moi(
             variant["reportEvents"][ev_idx]["modeOfInheritance"]
         )
         var_dict["Inheritance"] = (
