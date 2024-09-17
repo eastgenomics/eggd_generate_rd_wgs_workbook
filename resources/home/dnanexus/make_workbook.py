@@ -363,9 +363,10 @@ class excel():
                 if panel_details is not None:
                     panel_version = panel['panelVersion']
                     self.summary_content[(row, 2)] = panel_details.get('rcode')
-                    self.summary_content[(row, 3)] = panel_details.get(
-                        'panel_name'
-                    ) + f' ({panel_version})'
+                    self.summary_content[(row, 3)] =  (
+                        f"{panel_details.get('panel_name')} "
+                        f"({panel_version})"
+                    )
 
             row += 1
 
