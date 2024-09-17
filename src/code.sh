@@ -16,7 +16,6 @@ main() {
     if [ "$cnv" ]; then args+="--cnv ${cnv} "; fi
     if [ "$output_filename" ]; then args+="--output_filename ${output_filename} "; fi
     if [ "$epic_clarity" ]; then args+="--epic_clarity /home/dnanexus/in/epic_clarity/*.xlsx "; fi
-    if [ "$panels" ]; then args+="--panels /home/dnanexus/in/panels/*.json "; fi
 
     # Generate workbook
     /usr/bin/time -v python3 start_process.py \
@@ -24,6 +23,7 @@ main() {
     --mane_file /home/dnanexus/in/mane_file/* \
     --refseq_tsv /home/dnanexus/in/refseq_tsv/* \
     --config /home/dnanexus/in/config/*json \
+    --panels /home/dnanexus/in/panels/*json \
     $args
 
     mv *.xlsx /home/dnanexus/out/xlsx_reports
