@@ -120,7 +120,7 @@ class excel():
 
         with open(self.args.config) as fh:
             self.config = json.load(fh)
-        
+
         with open(self.args.panels) as f:
             self.panels = json.load(f)
 
@@ -363,7 +363,7 @@ class excel():
 
             row += 1
 
-       # Add clinical indication content
+        # Add clinical indication content
         self.summary_content[(2, 2)] = ", ".join(set(indications))
 
 
