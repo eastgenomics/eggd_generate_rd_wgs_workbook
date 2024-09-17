@@ -43,6 +43,7 @@ class excel():
         self.summary_content = None
         self.mane = None
         self.refseq_tsv = None
+        self.panels = None
         self.config = None
         self.gel_index = None
         self.ex_index = None
@@ -353,13 +354,18 @@ class excel():
                 "interpretation_request_data"
             ]['json_request']['pedigree']['analysisPanels']:
             indications.append(panel['specificDisease'])
-            panel_details = self.panels.get(panel['panelId'])
-            panel_version = panel['panelVersion']
+            # Add panel ID from GEL JSON
             self.summary_content[(row, 1)] = panel['panelId']
-            self.summary_content[(row, 2)] = panel_details.get('rcode')
-            self.summary_content[(row, 3)] = panel_details.get(
-                'panel_name'
-            ) + f' ({panel_version})'
+
+            # If panel JSON input is present, use this to add panel name + code
+            if self.panels is not None:
+                panel_details = self.panels.get(panel['panelId'])
+                if panel_details is not None:
+                    panel_version = panel['panelVersion']
+                    self.summary_content[(row, 2)] = panel_details.get('rcode')
+                    self.summary_content[(row, 3)] = panel_details.get(
+                        'panel_name'
+                    ) + f' ({panel_version})'
 
             row += 1
 

@@ -18,6 +18,7 @@ class TestWorkbook():
     Tests for excel() class in make_workbook script
     '''
     summary_content = {}
+    panels = None
     wgs_data = {
         "interpretation_request_data": {
             "json_request": {
@@ -32,7 +33,7 @@ class TestWorkbook():
                     'diseasePenetrances': [
                         {
                             'penetrance': 'complete',
-                            'specificDisease': 'Disease'
+                            'specificDisease': 'Congenital malformation'
                         },
                         {
                             'penetrance': 'incomplete',
@@ -43,7 +44,7 @@ class TestWorkbook():
                         {
                             'panelId': "486",
                             'panelName': "286",
-                            'specificDisease': 'Disease',
+                            'specificDisease': 'Congenital malformation',
                             'panelVersion': "2.2"
                         }
                     ]
@@ -58,7 +59,22 @@ class TestWorkbook():
         '''
         excel.get_panels(self)
         assert self.summary_content == {
-            (14, 1): '486', (14, 2): 'Disease', (14, 3): '2.2', (14, 4): '286'
+            (14, 1): '486', (2, 2): 'Congenital malformation'
+        }
+
+    def test_get_panels_extracts_data_from_input_panel_json(self):
+        self.panels = {
+            '486': {
+                'rcode': 'R123',
+                'panel_name': 'Paediatric disorders'
+            }
+        }
+        excel.get_panels(self)
+        assert self.summary_content == {
+            (14, 1): '486',
+            (2, 2): 'Congenital malformation',
+            (14, 2): 'R123',
+            (14, 3): 'Paediatric disorders (2.2)'
         }
 
     def test_get_penetrance(self):
