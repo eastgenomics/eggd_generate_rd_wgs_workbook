@@ -23,6 +23,7 @@ main() {
     --mane_file /home/dnanexus/in/mane_file/* \
     --refseq_tsv /home/dnanexus/in/refseq_tsv/* \
     --config /home/dnanexus/in/config/*json \
+    --panels /home/dnanexus/in/panels/*json \
     $args
 
     mv *.xlsx /home/dnanexus/out/xlsx_reports

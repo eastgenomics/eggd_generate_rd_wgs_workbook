@@ -43,6 +43,7 @@ class excel():
         self.summary_content = None
         self.mane = None
         self.refseq_tsv = None
+        self.panels = None
         self.config = None
         self.gel_index = None
         self.ex_index = None
@@ -121,6 +122,9 @@ class excel():
         with open(self.args.config) as fh:
             self.config = json.load(fh)
 
+        with open(self.args.panels) as f:
+            self.panels = json.load(f)
+
     def summary_page(self):
         '''
         Add summary page. Create a page in the workbook to populate with
@@ -145,7 +149,6 @@ class excel():
             (5, 7): "HPO",
             (2, 1): "Clinical indication",
             (1, 8): "Flags",
-            (2, 8): "Test code",
             (3, 1): "Penetrance",
             (30, 1): "Overall result",
             (31, 1): "Confirmation",
@@ -156,9 +159,8 @@ class excel():
             (10, 1): "LP number",
             (12, 1): "Panels",
             (13, 1): "Panel ID",
-            (13, 2): "Indication",
-            (13, 3): "Version",
-            (13, 4): "Panel name",
+            (13, 2): "Test code",
+            (13, 3): "Panel name and version",
             (21, 2): "In this case",
             (21, 3): "To be reported",
             (22, 1): "SNV Tier 1",
@@ -180,7 +182,6 @@ class excel():
 
         # Add panel data, penetrance data and data about family members
         self.get_panels()
-        self.get_clinical_interpretation()
         self.get_penetrance()
         self.person_data()
         if self.args.epic_clarity:
@@ -347,41 +348,31 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         '''
-        panels = []
+        indications = []
+        row = 14
         for panel in self.wgs_data[
                 "interpretation_request_data"
             ]['json_request']['pedigree']['analysisPanels']:
-            panel_list = [
-                panel['panelId'],
-                panel['panelName'],
-                panel['panelVersion'],
-                panel['specificDisease']
-            ]
-            panels.append(panel_list)
+            indications.append(panel['specificDisease'])
+            # Add panel ID from GEL JSON
+            self.summary_content[(row, 1)] = panel['panelId']
 
-        end = 1 + int(len(panels))
-        for i in range(1, end):
-            self.summary_content[(i+13, 1)] = panels[i-1][0]
-            self.summary_content[(i+13, 2)] = panels[i-1][3]
-            self.summary_content[(i+13, 3)] = panels[i-1][2]
-            self.summary_content[(i+13, 4)] = panels[i-1][1]
+            # If panel JSON input is present, use this to add panel name + code
+            if self.panels is not None:
+                panel_details = self.panels.get(panel['panelId'])
+                if panel_details is not None:
+                    panel_version = panel['panelVersion']
+                    self.summary_content[(row, 2)] = panel_details.get('rcode')
+                    self.summary_content[(row, 3)] = (
+                        f"{panel_details.get('panel_name')} "
+                        f"({panel_version})"
+                    )
 
-    def get_clinical_interpretation(self):
-        '''
-        If clinical interpretation exists in the JSON (it is absent from some
-        older ones), add it to the summary sheet
-        Inputs:
-            None
-        Outputs:
-            None, adds data to summary sheet.
-        '''
-        if self.wgs_data.get('referral') is not None:
-            self.summary_content[(2, 2)] = self.wgs_data['referral'][
-                "clinical_indication_full_name"
-            ]
-            self.summary_content[(2, 9)] =self.wgs_data['referral'][
-                "clinical_indication_code"
-            ]
+            row += 1
+
+        # Add clinical indication content
+        self.summary_content[(2, 2)] = ", ".join(set(indications))
+
 
     def get_penetrance(self):
         '''

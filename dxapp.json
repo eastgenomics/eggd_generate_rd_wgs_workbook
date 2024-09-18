@@ -62,12 +62,19 @@
         "help": ""
       },
       {
+        "name": "panels",
+        "label": "PanelApp panels JSON; maps panel ID to test code and panel name",
+        "class": "file",
+        "optional": false,
+        "help": ""
+      },
+      {
         "name": "epic_clarity",
         "label": "Epic Clarity export; which maps sample IDs to GEL ID",
         "class": "file",
         "optional": true,
         "help": ""
-      } 
+      }
     ],
     "outputSpec": [
       {
