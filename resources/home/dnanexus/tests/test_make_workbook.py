@@ -18,7 +18,12 @@ class TestWorkbook():
     Tests for excel() class in make_workbook script
     '''
     summary_content = {}
-    panels = None
+    panels = {
+        '486': {
+            'rcode': 'R123',
+            'panel_name': 'Paediatric disorders'
+        }
+    }
     wgs_data = {
         "interpretation_request_data": {
             "json_request": {
@@ -63,12 +68,6 @@ class TestWorkbook():
         }
 
     def test_get_panels_extracts_data_from_input_panel_json(self):
-        self.panels = {
-            '486': {
-                'rcode': 'R123',
-                'panel_name': 'Paediatric disorders'
-            }
-        }
         excel.get_panels(self)
         assert self.summary_content == {
             (14, 1): '486',
@@ -286,5 +285,5 @@ class TestVariantNomenclature():
         refseq_tsv = ["ENST0000033\tENSP0000044\tENSG00000022",
                            "ENST0000066\tENSP0000088\tENSG00000044"]
         assert var_info.look_up_id_in_refseq_mane_conversion_file(
-            refseq_tsv, "ENST0000033", "ENST"
+            refseq_tsv, "ENST0000033", "ENSP"
         ) == "ENSP0000044"
