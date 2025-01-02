@@ -58,16 +58,12 @@ class TestWorkbook():
         }
     }
 
-    def test_get_panels(self):
-        '''
-        Check that panels are extracted from JSON as expected.
-        '''
-        excel.get_panels(self)
-        assert self.summary_content == {
-            (14, 1): '486', (2, 2): 'Congenital malformation'
-        }
-
     def test_get_panels_extracts_data_from_input_panel_json(self):
+        '''
+        '486' and 'Congenital malformation' are sourced directly from the GEL
+        JSON and 'R123' and 'Paediatric disorders (2.2)' are sourced from
+        looking the panel ID up in the panel JSON
+        '''
         excel.get_panels(self)
         assert self.summary_content == {
             (14, 1): '486',
