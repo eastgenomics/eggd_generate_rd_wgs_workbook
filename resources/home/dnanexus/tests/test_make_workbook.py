@@ -7,7 +7,7 @@ import obonet
 import sys
 import json
 from make_workbook import excel
-from get_variant_info import VariantNomenclature, VariantUtils
+import get_variant_info as var_info
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -154,7 +154,7 @@ class TestVariantInfo():
         empty strings as the values.
         '''
         column_list = ["ColA", "ColB"]
-        assert VariantUtils.add_columns_to_dict(
+        assert var_info.add_columns_to_dict(
             column_list
         ) == {"ColA": '', "ColB": ''}
 
@@ -174,7 +174,7 @@ class TestVariantInfo():
 
         tiers = []
         for tiering in tiers_to_convert:
-            tiers.append(VariantUtils.convert_tier(tiering[0], tiering[1]))
+            tiers.append(var_info.convert_tier(tiering[0], tiering[1]))
 
         assert tiers == [
             "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
@@ -195,7 +195,7 @@ class TestVariantInfo():
                 }
             ]
         }}
-        assert VariantUtils.get_af_max(variant) == '0.001'
+        assert var_info.get_af_max(variant) == '0.001'
 
 
 class TestIndexParticipant():
@@ -220,7 +220,7 @@ class TestIndexParticipant():
         Check indexing of proband is worked out correctly; here the proband is
         the second in the list, so we expect index 1 to be returned.
         '''
-        assert VariantUtils.index_participant(self.variant, self.proband) == 1
+        assert var_info.index_participant(self.variant, self.proband) == 1
 
     def test_index_if_proband_not_found(self):
         '''
@@ -229,14 +229,14 @@ class TestIndexParticipant():
         self.variant['variantCalls'].pop(1)
 
         with pytest.raises(RuntimeError):
-            VariantUtils.index_participant(self.variant, self.proband)
+            var_info.index_participant(self.variant, self.proband)
 
     def test_returns_none_if_no_idx_provided(self):
         '''
         Check if index is None (i.e. there is no mother and/or father) None
         is returned.
         '''
-        assert VariantUtils.index_participant(self.variant, None) is None
+        assert var_info.index_participant(self.variant, None) is None
 
 
 class TestRanking():
@@ -255,7 +255,7 @@ class TestRanking():
         correct_ranks = self.str_ranks[:-1]
 
         pd.testing.assert_frame_equal(
-            VariantUtils.get_top_3_ranked(self.df),
+            var_info.get_top_3_ranked(self.df),
             pd.DataFrame({'Priority': correct_ranks})
         )
 
@@ -268,7 +268,7 @@ class TestRanking():
         self.df = self.df.drop([1])
 
         pd.testing.assert_frame_equal(
-            VariantUtils.get_top_3_ranked(self.df).reset_index(drop=True),
+            var_info.get_top_3_ranked(self.df).reset_index(drop=True),
             pd.DataFrame({'Priority': self.str_ranks}).reset_index(drop=True)
         )
 
@@ -285,6 +285,6 @@ class TestVariantNomenclature():
         '''
         refseq_tsv = ["ENST0000033\tENSP0000044\tENSG00000022",
                            "ENST0000066\tENSP0000088\tENSG00000044"]
-        assert VariantNomenclature.get_ensp(
-            refseq_tsv, "ENST0000033"
+        assert var_info.look_up_id_in_refseq_mane_conversion_file(
+            refseq_tsv, "ENST0000033", "ENST"
         ) == "ENSP0000044"

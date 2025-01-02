@@ -29,7 +29,7 @@ Required
 Optional
 * `acmg`: number of SNV ACMG interpretation sheets to add to the workbook
 * `cnv`: number of CNV interpretation sheets to add to the workbook
-* `epic_clarity`: .xlsx file of Epic Clarity export, will be used to add sample IDs to the workbook
+* `epic_clarity`: .csv file of Epic Clarity export, will be used to add sample IDs to the workbook
 
 ## What variants are displayed in the workbook?
 GEL Tiering sheet
