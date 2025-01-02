@@ -404,7 +404,7 @@ def get_hgvs_exomiser(variant, mane, refseq_tsv):
     refseq = look_up_id_in_refseq_mane_conversion_file(
         mane, hgvs_source.split(':')[1], "NM"
     )
-    print(refseq)
+
     # If no MANE, return Ensembl transcript nomenclature
     if refseq is not None:
         hgvs_c = refseq + ":" + hgvs_source.split(':')[2]
@@ -469,7 +469,6 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
         hgvs_c = ', '.join(list(set(ref_list)))
         hgvs_p_list = []
         for enst in enst_list:
-            print(enst)
             ensp = look_up_id_in_refseq_mane_conversion_file(
                 refseq_tsv, enst, "ENSP"
             )
