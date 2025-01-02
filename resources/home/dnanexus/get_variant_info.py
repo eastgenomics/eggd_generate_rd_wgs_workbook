@@ -470,7 +470,7 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
         hgvs_p_list = []
         for enst in enst_list:
             ensp = look_up_id_in_refseq_mane_conversion_file(
-                refseq_tsv, enst, "ENSP"
+                refseq_tsv, enst.split(".")[0], "ENSP"
             )
             if protein_changes != []:
                 for protein in protein_changes:
