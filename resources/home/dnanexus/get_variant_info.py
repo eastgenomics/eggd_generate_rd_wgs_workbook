@@ -365,12 +365,21 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
             matched_id (str): Matched ID or None if no match found.
     '''
     matched_id = None
+    matches = []
     for line in conversion:
         if query_id in line:
             matches = [x for x in line.split() if x.startswith(id_type)]
-            if matches != []:
-                matched_id = matches[0]
             break
+
+    if matches != []:
+        if len(matches) == 1:
+            matched_id = matches[0]
+        else:
+            print(
+                f"Multiple matches for {query_id} found {matches.join(', ')}."
+                "\nUnable to assign a match to this transcript."
+            )
+
     return matched_id
 
 
