@@ -113,20 +113,18 @@ def get_inheritance(variant, mother_idx, father_idx, p_sex):
 
     # if there is a mother in the JSON and the variant is alt_homozygous in
     # or heterozygous in the mother then can infer maternal inheritance
-    if mother_idx is not None:
-        if zygosity(variant, mother_idx) in inheritance_types:
-            maternally_inherited = True
+    if (mother_idx is not None and
+        zygosity(variant, mother_idx) in inheritance_types):
+        maternally_inherited = True
 
     # if there is a father in the JSON and the variant is alt_homozygous in
     # or heterozygous in the father then can infer paternal inheritance
     # filter out XY probands here as X should be inherited from mother
-    if father_idx is not None:
-        if zygosity(variant, father_idx) in inheritance_types:
-            if (p_sex == 'MALE' and
-            variant['variantCoordinates']['chromosome'] == 'X'):
-                paternally_inherited = False
-            else:
-                paternally_inherited = True
+    if (father_idx is not None and
+        zygosity(variant, father_idx) in inheritance_types and
+        not (p_sex == 'MALE' and
+        variant['variantCoordinates']['chromosome'] == 'X')):
+        paternally_inherited = True
 
     if maternally_inherited and not paternally_inherited:
         inheritance = "maternal"
