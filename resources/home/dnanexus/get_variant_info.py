@@ -351,13 +351,13 @@ def get_top_3_ranked(df):
     return df
 
 
-def look_up_id_in_refseq_mane_conversion_file(conversion_file, query_id, id_type):
+def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
     '''
     Search contents of a conversion file for a given ID. If a match is found,
     output the matched ID, else output None
         Inputs:
             query_id (str): ID to query (an ensembl ID)
-            conversion_file (list): list of lines from a transcript
+            conversion (list): list of lines from a transcript
             nomenclature conversion file. Either the MANE file, which has only
             MANE information, or the RefSeq file which has all RefSeq
             transcripts
@@ -367,7 +367,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion_file, query_id, id_type
             matched_id (str): Matched ID or None if no match found.
     '''
     matched_id = None
-    for line in conversion_file:
+    for line in conversion:
         if query_id in line:
             matches = [x for x in line.split() if x.startswith(id_type)]
             if matches != []:
