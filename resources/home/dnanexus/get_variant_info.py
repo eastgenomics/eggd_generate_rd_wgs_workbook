@@ -217,7 +217,7 @@ def get_str_info(variant, proband, columns):
     '''
     num_copies = lambda x, y, z: x['variantCalls'][y]['numberOfCopies'][
         z
-        ]['numberOfCopies']
+    ]['numberOfCopies']
 
     var_dict = add_columns_to_dict(columns)
     pb_idx = index_participant(variant, proband)

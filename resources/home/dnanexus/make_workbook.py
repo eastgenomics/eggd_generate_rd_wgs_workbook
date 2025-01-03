@@ -803,7 +803,7 @@ class excel():
         if not ex_df.empty:
             # Grab all the de novos
             denovo_df = ex_df.loc[ex_df['Priority'] == "De novo"]
-            
+
             # Grab all the exomiser variants
             ex_df = ex_df.loc[ex_df['Priority'] != "De novo"]
 
