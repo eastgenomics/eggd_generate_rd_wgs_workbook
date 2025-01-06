@@ -15,7 +15,7 @@ import re
 import dxpy
 
 from excel_styles import ExcelStyles, DropDown
-from get_variant_info import VariantUtils, VariantNomenclature
+import get_variant_info as var_info
 
 DEFAULT_FONT.name = 'Calibri'
 # row and col counts that are to be unlocked next to
@@ -117,7 +117,8 @@ class excel():
             self.mane = [x.decode('utf8').strip() for x in f.readlines()]
 
         with gzip.open(self.args.refseq_tsv) as f:
-            self.refseq_tsv = [x.decode('utf8').strip() for x in f.readlines()]
+            contents = [x.decode('utf8').strip() for x in f.readlines()]
+            self.refseq_tsv = [x for x in contents if "RefSeq_mRNA" in x]
 
         with open(self.args.config) as fh:
             self.config = json.load(fh)
@@ -150,12 +151,6 @@ class excel():
             (2, 1): "Clinical indication",
             (1, 8): "Flags",
             (3, 1): "Penetrance",
-            (30, 1): "Overall result",
-            (31, 1): "Confirmation",
-            (33, 2): "Name",
-            (33, 3): "Date",
-            (34, 1): "Primary analysis",
-            (35, 1): "Data check",
             (10, 1): "LP number",
             (12, 1): "Panels",
             (13, 1): "Panel ID",
@@ -165,10 +160,18 @@ class excel():
             (21, 3): "To be reported",
             (22, 1): "SNV Tier 1",
             (23, 1): "SNV Tier 2",
-            (24, 1): "CNV Tier 1",
-            (25, 1): "STR Tier 1",
-            (27, 1): "Exomiser top 3 (score ≥ 0.75)",
-            (28, 1): "De novo",
+            (25, 1): "CNV Tier 1",
+            (26, 1): "STR Tier 1",
+            (24, 1): "SNV Tier 2 complete penetrance*",
+            (24, 4): "*refer to CU-WG-SOP-10 for penetrance rules",
+            (28, 1): "Exomiser top 3 (score ≥ 0.75)",
+            (29, 1): "De novo",
+            (31, 1): "Overall result",
+            (32, 1): "Confirmation",
+            (34, 2): "Name",
+            (34, 3): "Date",
+            (35, 1): "Primary analysis",
+            (36, 1): "Data check",
         }
 
         self.summary_content = {
@@ -204,12 +207,12 @@ class excel():
 
         row_ranges = {
             'horizontal': [
-                'A33:C33', 'A34:C34', 'A36:C36', 'A30:B30', 'A31:B31',
-                'A32:B32'
+                'A34:C34', 'A33:B33', 'A37:C37', 'A31:B31', 'A32:B32',
+                'A33:B33'
             ],
             'vertical': [
-                'A33:A35', 'B33:B35', 'C33:C35', 'D33:D35', 'A30:A31',
-                'B30:B31', 'C30:C31',
+                'A34:A36', 'B34:B36', 'C34:C36', 'D34:D36', 'A31:A32',
+                'B31:B32', 'C31:C32',
             ]
         }
 
@@ -357,16 +360,15 @@ class excel():
             # Add panel ID from GEL JSON
             self.summary_content[(row, 1)] = panel['panelId']
 
-            # If panel JSON input is present, use this to add panel name + code
-            if self.panels is not None:
-                panel_details = self.panels.get(panel['panelId'])
-                if panel_details is not None:
-                    panel_version = panel['panelVersion']
-                    self.summary_content[(row, 2)] = panel_details.get('rcode')
-                    self.summary_content[(row, 3)] = (
-                        f"{panel_details.get('panel_name')} "
-                        f"({panel_version})"
-                    )
+            # If panel ID is in JSON, use this to add panel name + code
+            panel_details = self.panels.get(panel['panelId'])
+            if panel_details is not None:
+                panel_version = panel['panelVersion']
+                self.summary_content[(row, 2)] = panel_details.get('rcode')
+                self.summary_content[(row, 3)] = (
+                    f"{panel_details.get('panel_name')} "
+                    f"({panel_version})"
+                )
 
             row += 1
 
@@ -409,28 +411,40 @@ class excel():
         family_id = self.wgs_data['family_id']
         # Only run if there are only parents and proband
         if self.other_relation is False:
-            # Read in xlsx as df, using only relevant columns
-            df = pd.read_excel(
+            required_cols = [
+                "WGS Referral ID",
+                "External Specimen Identifier",
+                "Specimen Identifier",
+                "Patient Stated Gender",
+                "Year of Birth"
+            ]
+            # Read in csv as df, using only relevant columns
+            df = pd.read_csv(
                 self.args.epic_clarity,
-                usecols=[
-                    "WGS Referral ID",
-                    "External Specimen Identifier",
-                    "Specimen Identifier",
-                    "Sex",
-                    "YOB"
-                    ]
+                usecols=lambda x: x in required_cols
             )
+
+            # Check that required columns are present in Epic extract
+            missing_columns = set(required_cols) - set(df.columns)
+
+            if missing_columns:
+                raise ValueError(
+                    "EPIC Clarity extract is missing required column(s): "
+                    f"{missing_columns}. Please amend extract, or run again "
+                    "without it."
+                    )
+
             # Filter df to only have rows with the family ID for this case
             fam_df = df.loc[df['WGS Referral ID'] == family_id]
 
             if not fam_df.empty:
             # Use most recent year of birth to work out proband, then get IDs
-                pb_idx = fam_df['YOB'].idxmax()
-                pb_age = fam_df['YOB'].max()
+                pb_idx = fam_df["Year of Birth"].idxmax()
+                pb_age = fam_df["Year of Birth"].max()
                 pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
 
-                m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, "FEMALE")
-                f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, "MALE")
+                m_sp, m_nuh = self.get_parent_ids(pb_age, fam_df, 2)
+                f_sp, f_nuh = self.get_parent_ids(pb_age, fam_df, 1)
 
                 self.summary_content[(6, 3)] = pb_sp
                 self.summary_content[(6, 4)] = pb_nuh
@@ -481,7 +495,9 @@ class excel():
             p_sp: Epic sample number for the parent
             p_nuh: External sample ID for NUH samples for the parent
         '''
-        parent_df = df[(df['Sex'] == sex) & (df['YOB'] < pb_yob)]
+        parent_df = df[
+            (df['Patient Stated Gender'] == sex) & (df['Year of Birth'] < pb_yob)
+        ]
         if parent_df.empty:
             p_sp = None
             p_nuh = None
@@ -584,7 +600,7 @@ class excel():
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
-                    var_dict = VariantUtils.get_snv_info(
+                    var_dict = var_info.get_snv_info(
                         snv,
                         self.proband,
                         event_index,
@@ -593,7 +609,7 @@ class excel():
                         self.father,
                         self.proband_sex
                         )
-                    c_dot, p_dot = VariantNomenclature.get_hgvs_gel(
+                    c_dot, p_dot = var_info.get_hgvs_gel(
                         snv,
                         self.mane,
                         self.refseq_tsv
@@ -610,7 +626,7 @@ class excel():
             ]:
             for event in s_t_r["reportEvents"]:
                 if event["tier"] == "TIER1":
-                    var_dict = VariantUtils.get_str_info(
+                    var_dict = var_info.get_str_info(
                         s_t_r, self.proband, self.column_list
                     )
                     variant_list.append(var_dict)
@@ -626,7 +642,7 @@ class excel():
                 if cnv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA"
                     ]:
-                    var_dict = VariantUtils.get_cnv_info(
+                    var_dict = var_info.get_cnv_info(
                         cnv, event_index, self.column_list
                     )
                     variant_list.append(var_dict)
@@ -640,8 +656,8 @@ class excel():
         count_dict = {
             'B22': "TIER1_SNV",
             'B23': "TIER2_SNV",
-            'B24': "TIER1_CNV",
-            'B25': "TIER1_STR",
+            'B25': "TIER1_CNV",
+            'B26': "TIER1_STR",
         }
 
         # if df is not empty, sort and add counts of each variant type to
@@ -726,7 +742,7 @@ class excel():
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
-            var_dict = VariantUtils.get_snv_info(
+            var_dict = var_info.get_snv_info(
                 snv,
                 self.proband,
                 event_index,
@@ -738,7 +754,7 @@ class excel():
             rank = int(snv['reportEvents'][0]['vendorSpecificScores']['rank'])
             var_dict["Priority"] = f"Exomiser Rank {rank}"
             var_dict["HGVSc"], var_dict["HGVSp"] = (
-                VariantNomenclature.get_hgvs_exomiser(
+                var_info.get_hgvs_exomiser(
                     snv,
                     self.mane,
                     self.refseq_tsv)
@@ -754,7 +770,7 @@ class excel():
             for event in snv["reportEvents"]:
                 if event['segregationPattern'] == 'deNovo':
                     event_index = snv["reportEvents"].index(event)
-                    var_dict = VariantUtils.get_snv_info(
+                    var_dict = var_info.get_snv_info(
                         snv,
                         self.proband,
                         event_index,
@@ -766,7 +782,7 @@ class excel():
                     var_dict["Priority"] = "De novo"
                     var_dict["Inheritance"] = "De novo"
                     var_dict["HGVSc"], var_dict["HGVSp"] = (
-                        VariantNomenclature.get_hgvs_gel(
+                        var_info.get_hgvs_gel(
                             snv,
                             self.mane,
                             self.refseq_tsv)
@@ -797,9 +813,19 @@ class excel():
             )]
 
         if not ex_df.empty:
+            # Grab all the de novos
+            denovo_df = ex_df.loc[ex_df['Priority'] == "De novo"]
+
+            # Grab all the exomiser variants
+            ex_df = ex_df.loc[ex_df['Priority'] != "De novo"]
+
             # Now we have filtered out all variants that are in the GEL tiering
             # page we need to get the top 3 ranks in the exomiser df
-            ex_df = VariantUtils.get_top_3_ranked(ex_df)
+            if not ex_df.empty:
+                ex_df = var_info.get_top_3_ranked(ex_df)
+
+            # Concat de novos and exomiser ranked back together
+            ex_df = pd.concat([ex_df, denovo_df])
 
             # Sort df by priority first, and then gene name
             ex_df = ex_df.sort_values(['Priority', 'Gene'])
@@ -817,10 +843,10 @@ class excel():
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         if 'Priority' in ex_df.columns:
-            summary_sheet['B28'] = ex_df['Priority'].str.startswith(
+            summary_sheet['B29'] = ex_df['Priority'].str.startswith(
                 "De novo"
             ).sum()
-            summary_sheet['B27'] = ex_df['Priority'].str.startswith(
+            summary_sheet['B28'] = ex_df['Priority'].str.startswith(
                 'Exomiser'
             ).sum()
 

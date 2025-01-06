@@ -18,11 +18,18 @@ Required
 * `refseq_tsv`: a RefSeq TSV with Ensembl protein and transcript IDs
 * `mane_file`: a MANE summary.txt.gz summary file
 * `config`: config file with DNAnexus file IDs for HPO obo files, and thresholds for de novo quality score for SNVs and CNVs
+* `panels`: json file mapping panel IDs to panel names and test codes. In the format:
+```json
+    "524": {
+        "rcode": "R367",
+        "panel_name": "Inherited pancreatic cancer"
+    }
+```
 
 Optional
 * `acmg`: number of SNV ACMG interpretation sheets to add to the workbook
 * `cnv`: number of CNV interpretation sheets to add to the workbook
-* `epic_clarity`: .xlsx file of Epic Clarity export, will be used to add sample IDs to the workbook
+* `epic_clarity`: .csv file of Epic Clarity export, will be used to add sample IDs to the workbook
 
 ## What variants are displayed in the workbook?
 GEL Tiering sheet
