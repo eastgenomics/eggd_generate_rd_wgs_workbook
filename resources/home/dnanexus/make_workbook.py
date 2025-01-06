@@ -411,17 +411,29 @@ class excel():
         family_id = self.wgs_data['family_id']
         # Only run if there are only parents and proband
         if self.other_relation is False:
+            required_cols = [
+                "WGS Referral ID",
+                "External Specimen Identifier",
+                "Specimen Identifier",
+                "Patient Stated Gender",
+                "Year of Birth"
+            ]
             # Read in csv as df, using only relevant columns
             df = pd.read_csv(
                 self.args.epic_clarity,
-                usecols=[
-                    "WGS Referral ID",
-                    "External Specimen Identifier",
-                    "Specimen Identifier",
-                    "Patient Stated Gender",
-                    "Year of Birth"
-                    ]
+                usecols=lambda x: x in required_cols
             )
+
+            # Check that required columns are present in Epic extract
+            missing_columns = set(required_cols) - set(df.columns)
+
+            if missing_columns:
+                raise ValueError(
+                    "EPIC Clarity extract is missing required column(s): "
+                    f"{missing_columns}. Please amend extract, or run again "
+                    "without it."
+                    )
+
             # Filter df to only have rows with the family ID for this case
             fam_df = df.loc[df['WGS Referral ID'] == family_id]
 

@@ -25,6 +25,7 @@ class TestWorkbook():
         }
     }
     wgs_data = {
+        "family_id": "r12345",
         "interpretation_request_data": {
             "json_request": {
                 "pedigree": {
@@ -79,6 +80,23 @@ class TestWorkbook():
         '''
         excel.get_penetrance(self)
         assert self.summary_content[(3,2)] == "complete, incomplete"
+
+    @mock.patch('pandas.read_csv')
+    def test_epic_extract_with_incorrect_column_names_raises_error(self, pd_read_csv_mock):
+        self.args = argparse.Namespace
+        self.args.epic_clarity = None
+        self.other_relation = False
+        # This should error as required Specimen Identifier cols are missing
+        mock_df = pd.DataFrame(
+            {
+            "Year of Birth": [1937, 1975],
+            "Patient Stated Gender": [1, 2],
+            "WGS Referral ID": ["r12345", "r67890"]
+            }
+        )
+        pd_read_csv_mock.return_value = mock_df
+        with pytest.raises(ValueError):
+            excel.add_epic_data(self)
 
 
 class TestInterpretationService():
