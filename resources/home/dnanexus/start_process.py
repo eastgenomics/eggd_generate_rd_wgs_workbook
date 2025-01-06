@@ -12,7 +12,6 @@ class SortArgs():
     '''
     def __init__(self):
         self.args = self.parse_args()
-        self.parse_output()
 
     def parse_args(self):
         '''
@@ -65,17 +64,6 @@ class SortArgs():
             help='JSON file mapping panel ID to panel name and test code'
         )
         return parser.parse_args()
-
-    def parse_output(self) -> None:
-        """
-        Strip JSON suffix, then set output to include outdir for writing output
-        file. Note for DNAnexus files this will be overwritten later as it
-        currently uses the DX file ID.
-        """
-        if not self.args.output_filename:
-            self.args.output_filename = Path(
-                self.args.json).name.replace('.json', '.xlsx')
-
 
 
 def main():
