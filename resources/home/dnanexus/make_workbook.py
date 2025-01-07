@@ -82,6 +82,8 @@ class excel():
         """
         # Initiate files and workbook to write in
         self.open_files()
+        if not self.args.output_filename:
+            self.args.output_filename = f"{self.wgs_data['family_id']}.xlsx"
         self.writer = pd.ExcelWriter(
             self.args.output_filename, engine='openpyxl'
         )
