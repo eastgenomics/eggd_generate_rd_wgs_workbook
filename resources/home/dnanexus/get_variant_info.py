@@ -376,7 +376,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
             matched_id = matches[0]
         else:
             print(
-                f"Multiple matches for {query_id} found {matches.join(', ')}."
+                f"Multiple matches for {query_id} found {', '.join(matches)}."
                 "\nUnable to assign a match to this transcript."
             )
 
