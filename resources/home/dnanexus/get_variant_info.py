@@ -269,7 +269,7 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
     var_dict["Priority"] = convert_tier(
         variant["reportEvents"][ev_idx]["tier"], "SNV"
     )
-    var_dict["Zygosity"] = variant["variantCalls"][pb_idx]["zygosity"]
+    var_dict["Zygosity"] = get_zygosity(variant, pb_idx, pb_sex, var_dict["Chr"])
     var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
     var_dict["Gene"] = get_gene_symbol(variant)
     var_dict['AF Max'] = get_af_max(variant)
@@ -285,6 +285,28 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
         )
     )
     return var_dict
+
+def get_zygosity(variant, pb_idx, p_sex, chrom):
+    '''
+    Get the zygosity fo the variant, and if the variant is heterozygous, 
+    on the X chromosome and the proband is male then set the
+    zygosity to hemizygous.
+
+    Inputs:
+        variant: (dict) dict extracted from JSON describing single variant.
+        p_sex: (str) sex of the proband.
+        chrom: (str) chromosome of the variant.
+
+    Outputs:
+        zygosity: (str) zygosity of the variant.
+
+    '''
+
+    zygosity = variant["variantCalls"][pb_idx]["zygosity"]
+    if zygosity == "heterozygous" and p_sex == "MALE" and chrom == "X":
+        zygosity = "hemizygous"
+    return zygosity
+
 
 
 def get_cnv_info(variant, ev_index, columns):
