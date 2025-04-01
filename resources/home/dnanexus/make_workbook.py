@@ -550,9 +550,9 @@ class excel():
                 self.gel_index = self.wgs_data[
                     self.genome_format
                     ].index(interpretation)
-            elif interpretation[self.genome_data_format][
+            elif str(interpretation[self.genome_data_format][
                 'interpretationService'
-                ] == 'Exomiser':
+                ]).lower() == 'exomiser':
                 self.ex_index = self.wgs_data[
                     self.genome_format
                     ].index(interpretation)
