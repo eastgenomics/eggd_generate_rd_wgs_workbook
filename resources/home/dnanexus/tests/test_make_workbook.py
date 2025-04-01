@@ -113,7 +113,7 @@ class TestInterpretationService():
             {'interpretedGenomeData': {
                 'interpretationService': 'genomics_england_tiering'}
             },
-            {'interpretedGenomeData': {'interpretationService': 'Exomiser'}}
+            {'interpretedGenomeData': {'interpretationService': 'exomiser'}}
         ]
     }
 
