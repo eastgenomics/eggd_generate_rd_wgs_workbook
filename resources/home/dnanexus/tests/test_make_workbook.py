@@ -209,6 +209,31 @@ class TestVariantInfo():
             ]
         }}
         assert var_info.get_af_max(variant) == '0.001'
+    
+    def test_male_proband_X_SNV_is_hemizygous(self):
+        '''
+        Placeholder for testing male proband X SNV hemizygosity.
+        '''
+        variant = {
+            'variantCoordinates': {
+                'chromosome': 'X',
+                'position': 123456,
+                'reference': 'A',
+                'alternate': 'T',
+                'assembly': 'GRCh38'
+            },
+            'variantCalls': {
+                0: {
+                    'zygosity': 'heterozygous'
+                }
+            }
+
+        }
+
+        assert var_info.get_zygosity(variant, 0, "MALE", 'X') == 'hemizygous'
+        assert var_info.get_zygosity(variant, 0, "MALE", '12') == 'heterozygous'
+        assert var_info.get_zygosity(variant, 0, "FEMALE", 'X') == 'heterozygous'
+        pass
 
 
 class TestIndexParticipant():
