@@ -59,10 +59,14 @@ def convert_tier(tier, var_type):
         tier = "TIER1_CNV"
     elif tier == "TIER2" and var_type == "SNV":
         tier = "TIER2_SNV"
+    elif tier == "TIER2" and var_type == "CNV":
+        tier = "TIER2_CNV"
     elif tier == "TIERA" and var_type == "CNV":
         tier = "TIER1_CNV"
     elif tier == "TIER1" and var_type == "STR":
         tier = "TIER1_STR"
+    elif tier == "TIER2" and var_type == "STR":
+        tier = "TIER2_STR"
     return tier
 
 
@@ -309,7 +313,7 @@ def get_zygosity(zygosity, p_sex, chrom):
 
     if zygosity in ["heterozygous", "alternate_homozygous"] and \
         p_sex == "MALE" and chrom == "X":
-        
+
         zygosity = "hemizygous"
     return zygosity
 
