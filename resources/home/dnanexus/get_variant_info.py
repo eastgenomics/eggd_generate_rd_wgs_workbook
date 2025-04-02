@@ -293,7 +293,7 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
 
 def get_zygosity(zygosity, p_sex, chrom):
     '''
-    Get the zygosity fo the variant, and if the variant is heterozygous, 
+    Get the zygosity of the variant, and if the variant is heterozygous, 
     on the X chromosome and the proband is male then set the
     zygosity to hemizygous.
 
@@ -307,7 +307,9 @@ def get_zygosity(zygosity, p_sex, chrom):
 
     '''
 
-    if zygosity == "heterozygous" and p_sex == "MALE" and chrom == "X":
+    if zygosity in ["heterozygous", "alternate_homozygous"] and \
+        p_sex == "MALE" and chrom == "X":
+        
         zygosity = "hemizygous"
     return zygosity
 
