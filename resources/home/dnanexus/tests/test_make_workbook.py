@@ -216,8 +216,11 @@ class TestVariantInfo():
         '''
 
         heterozygous_variant = "heterozygous"
+        alt_hom_variant = "alternate_homozygous"
 
         assert var_info.get_zygosity(heterozygous_variant, "MALE", 'X') == 'hemizygous'
+        assert var_info.get_zygosity(alt_hom_variant, "MALE", 'X') == 'hemizygous'
+
         assert var_info.get_zygosity(heterozygous_variant, "MALE", '12') == 'heterozygous'
         assert var_info.get_zygosity(heterozygous_variant, "FEMALE", 'X') == 'heterozygous'
 
