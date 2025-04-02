@@ -639,8 +639,8 @@ class excel():
             ][self.genome_data_format]["structuralVariants"]:
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
-                # CNVs can be reported as Tier 1 or Tier A, GEL updated the
-                # nomenclature in 2024
+                # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B 
+                # GEL updated the nomenclature in 2024
                 if cnv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA, TIER2, TIERB"
                     ]:
