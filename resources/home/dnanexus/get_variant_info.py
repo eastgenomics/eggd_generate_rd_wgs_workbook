@@ -109,7 +109,7 @@ def get_inheritance(variant, mother_idx, father_idx, p_sex):
     maternally_inherited = False
     paternally_inherited = False
 
-    inheritance_types = ['alternate_homozygous', 'heterozygous']
+    inheritance_types = ['alternate_homozygous', 'heterozygous', 'hemizygous']
 
     # if there is a mother in the JSON and the variant is alt_homozygous in
     # or heterozygous in the mother then can infer maternal inheritance
