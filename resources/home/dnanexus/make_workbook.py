@@ -627,7 +627,7 @@ class excel():
                 "shortTandemRepeats"
             ]:
             for event in s_t_r["reportEvents"]:
-                if event["tier"] == "TIER1":
+                if event["tier"] in ["TIER1", "TIER2"]:
                     var_dict = var_info.get_str_info(
                         s_t_r, self.proband, self.column_list
                     )
@@ -642,7 +642,7 @@ class excel():
                 # CNVs can be reported as Tier 1 or Tier A, GEL updated the
                 # nomenclature in 2024
                 if cnv["reportEvents"][event_index]["tier"] in [
-                    "TIER1", "TIERA"
+                    "TIER1", "TIERA, TIER2, TIERB"
                     ]:
                     var_dict = var_info.get_cnv_info(
                         cnv, event_index, self.column_list
