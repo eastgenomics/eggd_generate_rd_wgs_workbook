@@ -214,26 +214,12 @@ class TestVariantInfo():
         '''
         Placeholder for testing male proband X SNV hemizygosity.
         '''
-        variant = {
-            'variantCoordinates': {
-                'chromosome': 'X',
-                'position': 123456,
-                'reference': 'A',
-                'alternate': 'T',
-                'assembly': 'GRCh38'
-            },
-            'variantCalls': {
-                0: {
-                    'zygosity': 'heterozygous'
-                }
-            }
 
-        }
+        heterozygous_variant = "heterozygous"
 
-        assert var_info.get_zygosity(variant, 0, "MALE", 'X') == 'hemizygous'
-        assert var_info.get_zygosity(variant, 0, "MALE", '12') == 'heterozygous'
-        assert var_info.get_zygosity(variant, 0, "FEMALE", 'X') == 'heterozygous'
-        pass
+        assert var_info.get_zygosity(heterozygous_variant, 0, "MALE", 'X') == 'hemizygous'
+        assert var_info.get_zygosity(heterozygous_variant, 0, "MALE", '12') == 'heterozygous'
+        assert var_info.get_zygosity(heterozygous_variant, 0, "FEMALE", 'X') == 'heterozygous'
 
 
 class TestIndexParticipant():
