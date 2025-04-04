@@ -163,7 +163,9 @@ class excel():
             (22, 1): "SNV Tier 1",
             (23, 1): "SNV Tier 2",
             (25, 1): "CNV Tier 1",
-            (26, 1): "STR Tier 1",
+            (26, 2): "CNV Tier 2",
+            (27, 1): "STR Tier 1",
+            (28, 1): "STR Tier 2",
             (24, 1): "SNV Tier 2 complete penetrance*",
             (24, 4): "*refer to CU-WG-SOP-10 for penetrance rules",
             (30, 1): "Exomiser top 3 (score ≥ 0.75)",
@@ -209,12 +211,12 @@ class excel():
 
         row_ranges = {
             'horizontal': [
-                'A34:C34', 'A33:B33', 'A37:C37', 'A31:B31', 'A32:B32',
-                'A33:B33'
+                'A36:C36', 'A35:B35', 'A39:C39', 'A33:B33', 'A35:B35',
+                'A35:B35'
             ],
             'vertical': [
-                'A34:A36', 'B34:B36', 'C34:C36', 'D34:D36', 'A31:A32',
-                'B31:B32', 'C31:C32',
+                'A36:A38', 'B36:B38', 'C36:C38', 'D36:D38', 'A33:A35',
+                'B33:B35', 'C33:C35',
             ]
         }
 
@@ -847,10 +849,10 @@ class excel():
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         if 'Priority' in ex_df.columns:
-            summary_sheet['B29'] = ex_df['Priority'].str.startswith(
+            summary_sheet['B31'] = ex_df['Priority'].str.startswith(
                 "De novo"
             ).sum()
-            summary_sheet['B28'] = ex_df['Priority'].str.startswith(
+            summary_sheet['B30'] = ex_df['Priority'].str.startswith(
                 'Exomiser'
             ).sum()
 
