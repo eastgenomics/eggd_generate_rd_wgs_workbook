@@ -55,14 +55,12 @@ def convert_tier(tier, var_type):
     '''
     if tier == "TIER1" and var_type == "SNV":
         tier = "TIER1_SNV"
-    elif tier == "TIER1" and var_type == "CNV":
+    elif tier in ["TIER1", "TIERA"] and var_type == "CNV":
         tier = "TIER1_CNV"
     elif tier == "TIER2" and var_type == "SNV":
         tier = "TIER2_SNV"
-    elif tier == "TIER2" and var_type == "CNV":
+    elif tier in ["TIER2", "TIERB"] and var_type == "CNV":
         tier = "TIER2_CNV"
-    elif tier == "TIERA" and var_type == "CNV":
-        tier = "TIER1_CNV"
     elif tier == "TIER1" and var_type == "STR":
         tier = "TIER1_STR"
     elif tier == "TIER2" and var_type == "STR":
