@@ -163,7 +163,7 @@ class excel():
             (22, 1): "SNV Tier 1",
             (23, 1): "SNV Tier 2",
             (25, 1): "CNV Tier 1",
-            (26, 2): "CNV Tier 2",
+            (26, 1): "CNV Tier 2",
             (27, 1): "STR Tier 1",
             (28, 1): "STR Tier 2",
             (24, 1): "SNV Tier 2 complete penetrance*",
