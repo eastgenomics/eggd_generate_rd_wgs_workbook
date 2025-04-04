@@ -659,7 +659,9 @@ class excel():
             'B22': "TIER1_SNV",
             'B23': "TIER2_SNV",
             'B25': "TIER1_CNV",
-            'B26': "TIER1_STR",
+            'B26': "TIER2_CNV",
+            'B27': "TIER1_STR",
+            'B28': "TIER2_STR",
         }
 
         # if df is not empty, sort and add counts of each variant type to
