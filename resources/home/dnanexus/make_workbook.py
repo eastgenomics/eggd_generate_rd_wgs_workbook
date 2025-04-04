@@ -166,14 +166,14 @@ class excel():
             (26, 1): "STR Tier 1",
             (24, 1): "SNV Tier 2 complete penetrance*",
             (24, 4): "*refer to CU-WG-SOP-10 for penetrance rules",
-            (28, 1): "Exomiser top 3 (score ≥ 0.75)",
-            (29, 1): "De novo",
-            (31, 1): "Overall result",
-            (32, 1): "Confirmation",
-            (34, 2): "Name",
-            (34, 3): "Date",
-            (35, 1): "Primary analysis",
-            (36, 1): "Data check",
+            (30, 1): "Exomiser top 3 (score ≥ 0.75)",
+            (31, 1): "De novo",
+            (33, 1): "Overall result",
+            (35, 1): "Confirmation",
+            (36, 2): "Name",
+            (36, 3): "Date",
+            (37, 1): "Primary analysis",
+            (38, 1): "Data check",
         }
 
         self.summary_content = {
