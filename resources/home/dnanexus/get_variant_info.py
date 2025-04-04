@@ -55,14 +55,16 @@ def convert_tier(tier, var_type):
     '''
     if tier == "TIER1" and var_type == "SNV":
         tier = "TIER1_SNV"
-    elif tier == "TIER1" and var_type == "CNV":
+    elif tier in ["TIER1", "TIERA"] and var_type == "CNV":
         tier = "TIER1_CNV"
     elif tier == "TIER2" and var_type == "SNV":
         tier = "TIER2_SNV"
-    elif tier == "TIERA" and var_type == "CNV":
-        tier = "TIER1_CNV"
+    elif tier in ["TIER2", "TIERB"] and var_type == "CNV":
+        tier = "TIER2_CNV"
     elif tier == "TIER1" and var_type == "STR":
         tier = "TIER1_STR"
+    elif tier == "TIER2" and var_type == "STR":
+        tier = "TIER2_STR"
     return tier
 
 
@@ -109,7 +111,7 @@ def get_inheritance(variant, mother_idx, father_idx, p_sex):
     maternally_inherited = False
     paternally_inherited = False
 
-    inheritance_types = ['alternate_homozygous', 'heterozygous']
+    inheritance_types = ['alternate_homozygous', 'heterozygous', 'hemizygous']
 
     # if there is a mother in the JSON and the variant is alt_homozygous in
     # or heterozygous in the mother then can infer maternal inheritance
@@ -269,7 +271,12 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
     var_dict["Priority"] = convert_tier(
         variant["reportEvents"][ev_idx]["tier"], "SNV"
     )
-    var_dict["Zygosity"] = variant["variantCalls"][pb_idx]["zygosity"]
+    var_dict["Zygosity"] = get_zygosity(
+        zygosity=variant["variantCalls"][pb_idx]["zygosity"],
+        p_sex=pb_sex,
+        chrom=var_dict["Chr"]
+    )
+    
     var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
     var_dict["Gene"] = get_gene_symbol(variant)
     var_dict['AF Max'] = get_af_max(variant)
@@ -285,6 +292,29 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
         )
     )
     return var_dict
+
+def get_zygosity(zygosity, p_sex, chrom):
+    '''
+    Get the zygosity of the variant, and if the variant is heterozygous, 
+    on the X chromosome and the proband is male then set the
+    zygosity to hemizygous.
+
+    Inputs:
+        zygosity: (dict) dict extracted from JSON describing single variant.
+        p_sex: (str) sex of the proband.
+        chrom: (str) chromosome of the variant.
+
+    Outputs:
+        zygosity: (str) zygosity of the variant.
+
+    '''
+
+    if zygosity in ["heterozygous", "alternate_homozygous"] and \
+        p_sex == "MALE" and chrom == "X":
+
+        zygosity = "hemizygous"
+    return zygosity
+
 
 
 def get_cnv_info(variant, ev_index, columns):
@@ -376,7 +406,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
             matched_id = matches[0]
         else:
             print(
-                f"Multiple matches for {query_id} found {matches.join(', ')}."
+                f"Multiple matches for {query_id} found {', '.join(matches)}."
                 "\nUnable to assign a match to this transcript."
             )
 

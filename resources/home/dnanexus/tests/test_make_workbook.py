@@ -113,7 +113,7 @@ class TestInterpretationService():
             {'interpretedGenomeData': {
                 'interpretationService': 'genomics_england_tiering'}
             },
-            {'interpretedGenomeData': {'interpretationService': 'Exomiser'}}
+            {'interpretedGenomeData': {'interpretationService': 'exomiser'}}
         ]
     }
 
@@ -209,6 +209,20 @@ class TestVariantInfo():
             ]
         }}
         assert var_info.get_af_max(variant) == '0.001'
+    
+    def test_male_proband_X_SNV_is_hemizygous(self):
+        '''
+        Placeholder for testing male proband X SNV hemizygosity.
+        '''
+
+        heterozygous_variant = "heterozygous"
+        alt_hom_variant = "alternate_homozygous"
+
+        assert var_info.get_zygosity(heterozygous_variant, "MALE", 'X') == 'hemizygous'
+        assert var_info.get_zygosity(alt_hom_variant, "MALE", 'X') == 'hemizygous'
+
+        assert var_info.get_zygosity(heterozygous_variant, "MALE", '12') == 'heterozygous'
+        assert var_info.get_zygosity(heterozygous_variant, "FEMALE", 'X') == 'heterozygous'
 
 
 class TestIndexParticipant():
