@@ -644,7 +644,7 @@ class excel():
                 # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B 
                 # GEL updated the nomenclature in 2024
                 if cnv["reportEvents"][event_index]["tier"] in [
-                    "TIER1", "TIERA, TIER2, TIERB"
+                    "TIER1", "TIERA", "TIER2", "TIERB"
                     ]:
                     var_dict = var_info.get_cnv_info(
                         cnv, event_index, self.column_list
