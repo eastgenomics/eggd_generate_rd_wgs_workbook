@@ -152,6 +152,7 @@ class excel():
             (5, 7): "HPO",
             (2, 1): "Clinical indication",
             (1, 8): "Flags",
+            (2, 8): "Previous testing",
             (3, 1): "Penetrance",
             (10, 1): "LP number",
             (12, 1): "Panels",
