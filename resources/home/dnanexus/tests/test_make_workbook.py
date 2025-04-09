@@ -172,7 +172,7 @@ class TestVariantInfo():
             column_list
         ) == {"ColA": '', "ColB": ''}
 
-    def test_get_str_info_teir1(self):
+    def test_get_str_info_tier1_or_tier2(self):
     # Mock input data
         variant = {
             "coordinates": {
@@ -220,7 +220,7 @@ class TestVariantInfo():
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
 
-        # Expected output
+        # Expected output for TIER1 STR
         expected_output = var_info.add_columns_to_dict(columns)
         expected_output.update({
             "Chr": "12",
@@ -236,9 +236,10 @@ class TestVariantInfo():
             "AF Max": "-"
         })
 
-
-        # Call the function
+        # Call the function to test for TEIR1
         result = var_info.get_str_info(variant, proband, columns, ev_idx)
+
+
         # Modify the variant to replace reportEvents with TIER2 events
         variant["reportEvents"] = [
             {
@@ -251,8 +252,11 @@ class TestVariantInfo():
             ]
             }
         ]
+
+        # Call the function to test for TIER2
         result2 = var_info.get_str_info(variant, proband, columns, ev_idx)
 
+        # Expected output for TIER2 STR
         expected_output_tier2 = var_info.add_columns_to_dict(columns)
         expected_output_tier2.update({
             "Chr": "12",
