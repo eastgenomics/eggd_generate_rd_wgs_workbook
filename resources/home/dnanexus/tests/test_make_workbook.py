@@ -158,6 +158,7 @@ class TestInterpretationService():
 
 
 class TestVariantInfo():
+
     '''
     Test variant info functions.
     '''
@@ -171,6 +172,107 @@ class TestVariantInfo():
             column_list
         ) == {"ColA": '', "ColB": ''}
 
+    def test_get_str_info_teir1(self):
+    # Mock input data
+        variant = {
+            "coordinates": {
+                "chromosome": "12",
+                "start": 6936728,
+                "end": 6936773
+            },
+            "reportEvents": [
+                {
+                    "tier": "TIER1",
+                    "genomicEntities": [
+                        {
+                            "type": "gene",
+                            "geneSymbol": "SYMB1"
+                        }
+                    ]
+                },
+                {
+                    "tier": "TIER2",
+                    "genomicEntities": [
+                        {
+                            "type": "gene",
+                            "geneSymbol": "SYMB1"
+                        }
+                    ]
+                }
+            ],
+            "shortTandemRepeatReferenceData": {
+                "repeatedSequence": "CAG"
+            },
+            "variantCalls": [
+                {
+                    "participantId": "testPB",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 8},
+                        {"numberOfCopies": 16}
+                    ]
+                }
+            ],
+            "variantAttributes": {
+                "alleleFrequencies": ""
+            }
+        }
+        proband = "testPB"
+        columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
+        ev_idx = 0
+
+        # Expected output
+        expected_output = var_info.add_columns_to_dict(columns)
+        expected_output.update({
+            "Chr": "12",
+            "Pos": 6936728,
+            "End": 6936773,
+            "Length": 45,
+            "Type": "STR",
+            "Priority": "TIER1_STR",
+            "Repeat": "CAG",
+            "STR1": 8,
+            "STR2": 16,
+            "Gene": "SYMB1",
+            "AF Max": "-"
+        })
+
+
+        # Call the function
+        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        # Modify the variant to replace reportEvents with TIER2 events
+        variant["reportEvents"] = [
+            {
+            "tier": "TIER2",
+            "genomicEntities": [
+                {
+                "type": "gene",
+                "geneSymbol": "SYMB1"
+                }
+            ]
+            }
+        ]
+        result2 = var_info.get_str_info(variant, proband, columns, ev_idx)
+
+        expected_output_tier2 = var_info.add_columns_to_dict(columns)
+        expected_output_tier2.update({
+            "Chr": "12",
+            "Pos": 6936728,
+            "End": 6936773,
+            "Length": 45,
+            "Type": "STR",
+            "Priority": "TIER2_STR",
+            "Repeat": "CAG",
+            "STR1": 8,
+            "STR2": 16,
+            "Gene": "SYMB1",
+            "AF Max": "-"
+        })
+
+        # Assertions
+        assert result == expected_output
+        assert result2 == expected_output_tier2
+
+
     def test_tier_conversion(self):
         '''
         Test Tiers from JSON are converted into tier representation as desired
@@ -183,6 +285,7 @@ class TestVariantInfo():
             ["TIER1", "CNV"],
             ["TIERA", "CNV"],
             ["TIER1", "STR"],
+            ["TIER2", "STR"],
         ]
 
         tiers = []
@@ -190,7 +293,7 @@ class TestVariantInfo():
             tiers.append(var_info.convert_tier(tiering[0], tiering[1]))
 
         assert tiers == [
-            "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR"
+            "TIER1_SNV", "TIER2_SNV", "TIER1_CNV", "TIER1_CNV", "TIER1_STR", "TIER2_STR"
         ]
 
     def test_get_af_max(self):
