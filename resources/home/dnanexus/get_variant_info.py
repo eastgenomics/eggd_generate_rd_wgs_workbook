@@ -197,7 +197,7 @@ def index_participant(variant, participant_id):
     return index
 
 
-def get_str_info(variant, proband, columns):
+def get_str_info(variant, proband, columns, ev_idx):
     '''
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
@@ -226,7 +226,9 @@ def get_str_info(variant, proband, columns):
     var_dict["End"] = variant["coordinates"]["end"]
     var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
     var_dict["Type"] = "STR"
-    var_dict["Priority"] = "TIER1_STR"
+    var_dict["Priority"] = convert_tier(
+        variant["reportEvents"][ev_idx]["tier"], "STR")
+
     var_dict["Repeat"] = variant[
         "shortTandemRepeatReferenceData"
     ]["repeatedSequence"]
