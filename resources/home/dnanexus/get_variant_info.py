@@ -210,6 +210,7 @@ def get_str_info(variant, proband, columns, ev_idx):
         variant (dict): dict extracted from JSON describing single variant
         proband (str): GEL ID for the proband
         columns (list): list of columns to make into keys for variant dict
+        ev_index (int): index of reportEvents list extracted from JSON
     Outputs:
         var_dict: (dict) dict of variant information extracted from JSON,
         formatted with the correct column headings for the excel workbook.
