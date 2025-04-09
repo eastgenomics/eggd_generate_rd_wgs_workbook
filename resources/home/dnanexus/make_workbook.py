@@ -632,7 +632,6 @@ class excel():
             for event in s_t_r["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = s_t_r["reportEvents"].index(event)
-                    print(f"event tier: {event['tier']}:event index: {event_index}")
                     var_dict = var_info.get_str_info(
                         s_t_r, self.proband, self.column_list, event_index
                     )
