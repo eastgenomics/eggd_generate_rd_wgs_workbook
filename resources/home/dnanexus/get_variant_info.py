@@ -197,7 +197,7 @@ def index_participant(variant, participant_id):
     return index
 
 
-def get_str_info(variant, proband, columns):
+def get_str_info(variant, proband, columns, ev_idx):
     '''
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
@@ -210,6 +210,7 @@ def get_str_info(variant, proband, columns):
         variant (dict): dict extracted from JSON describing single variant
         proband (str): GEL ID for the proband
         columns (list): list of columns to make into keys for variant dict
+        ev_idx (int): index of reportEvents list extracted from JSON
     Outputs:
         var_dict: (dict) dict of variant information extracted from JSON,
         formatted with the correct column headings for the excel workbook.
@@ -226,7 +227,9 @@ def get_str_info(variant, proband, columns):
     var_dict["End"] = variant["coordinates"]["end"]
     var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
     var_dict["Type"] = "STR"
-    var_dict["Priority"] = "TIER1_STR"
+    var_dict["Priority"] = convert_tier(
+        variant["reportEvents"][ev_idx]["tier"], "STR")
+
     var_dict["Repeat"] = variant[
         "shortTandemRepeatReferenceData"
     ]["repeatedSequence"]
