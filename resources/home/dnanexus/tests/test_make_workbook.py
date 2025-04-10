@@ -159,22 +159,7 @@ class TestInterpretationService():
 
 class TestVariantInfo():
 
-    '''
-    Test variant info functions.
-    '''
-    def test_add_cols_to_dict(self):
-        '''
-        Check that function takes list of columns and adds them to a dict with
-        empty strings as the values.
-        '''
-        column_list = ["ColA", "ColB"]
-        assert var_info.add_columns_to_dict(
-            column_list
-        ) == {"ColA": '', "ColB": ''}
-
-    def test_get_str_info_tier1_or_tier2(self):
-    # Mock input data
-        variant = {
+    variant = {
             "coordinates": {
                 "chromosome": "12",
                 "start": 6936728,
@@ -216,6 +201,23 @@ class TestVariantInfo():
                 "alleleFrequencies": ""
             }
         }
+
+    '''
+    Test variant info functions.
+    '''
+    def test_add_cols_to_dict(self):
+        '''
+        Check that function takes list of columns and adds them to a dict with
+        empty strings as the values.
+        '''
+        column_list = ["ColA", "ColB"]
+        assert var_info.add_columns_to_dict(
+            column_list
+        ) == {"ColA": '', "ColB": ''}
+
+    def test_get_str_info_tier1(self, variant=variant):
+    # Mock input data
+        
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
@@ -239,8 +241,11 @@ class TestVariantInfo():
         # Call the function to test for TEIR1
         result = var_info.get_str_info(variant, proband, columns, ev_idx)
 
+        # Assertions
+        assert result == expected_output
 
-        # Modify the variant to replace reportEvents with TIER2 events
+    def test_get_str_info_tier2(self, variant=variant):
+         # Modify the variant to replace reportEvents with TIER2 events
         variant["reportEvents"] = [
             {
             "tier": "TIER2",
@@ -253,12 +258,16 @@ class TestVariantInfo():
             }
         ]
 
+        proband = "testPB"
+        columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
+        ev_idx = 0
+
         # Call the function to test for TIER2
-        result2 = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(variant, proband, columns, ev_idx)
 
         # Expected output for TIER2 STR
-        expected_output_tier2 = var_info.add_columns_to_dict(columns)
-        expected_output_tier2.update({
+        expected_output_tier = var_info.add_columns_to_dict(columns)
+        expected_output_tier.update({
             "Chr": "12",
             "Pos": 6936728,
             "End": 6936773,
@@ -272,10 +281,45 @@ class TestVariantInfo():
             "AF Max": "-"
         })
 
-        # Assertions
-        assert result == expected_output
-        assert result2 == expected_output_tier2
+        assert result == expected_output_tier
 
+    def test_get_str_info_tier_null(self, variant=variant):
+        variant["reportEvents"] = [
+            {
+            "tier": "null",
+            "genomicEntities": [
+                {
+                "type": "gene",
+                "geneSymbol": "SYMB1"
+                }
+            ]
+            }
+        ]
+
+        proband = "testPB"
+        columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
+        ev_idx = 0
+
+        # Call the function to test for TIER2
+        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+
+        # Expected output for TIER2 STR
+        expected_output_tier = var_info.add_columns_to_dict(columns)
+        expected_output_tier.update({
+            "Chr": "12",
+            "Pos": 6936728,
+            "End": 6936773,
+            "Length": 45,
+            "Type": "STR",
+            "Priority": "null",
+            "Repeat": "CAG",
+            "STR1": 8,
+            "STR2": 16,
+            "Gene": "SYMB1",
+            "AF Max": "-"
+        })
+
+        assert result == expected_output_tier
 
     def test_tier_conversion(self):
         '''
