@@ -324,7 +324,7 @@ class TestVariantInfo():
 
         assert result == expected_output_tier
 
-    def test_get_snv_info_hemizygous_str(self, variant=variant):
+    def test_get_str_info_hemizygous(self, variant=variant):
         '''
         Check that the function returns the expected output in the case of 
         missing X STR count in XY proband.
