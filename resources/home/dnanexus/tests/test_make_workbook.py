@@ -321,6 +321,60 @@ class TestVariantInfo():
 
         assert result == expected_output_tier
 
+    def test_get_snv_info_hemizygous_str(self, variant=variant):
+        '''
+        Check that the function returns the expected output in the case of 
+        missing X STR count in XY proband.
+        '''
+
+        variant["variantCalls"] = [
+                {
+                    "participantId": "testPB",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 8}
+                    ]
+                },
+                {
+                    "participantId": "testT2",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 14},
+                        {"numberOfCopies": 16}
+                    ]
+                },
+                {
+                    "participantId": "testT3",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 8}
+                    ]
+                }
+            ]
+        
+        proband = "testPB"
+        columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
+        ev_idx = 0
+
+        # Call the function to test with hemizygous proband
+        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+
+        # Expected output for hemizygous proband
+        expected_output = var_info.add_columns_to_dict(columns)
+        expected_output.update({
+            "Chr": "12",
+            "Pos": 6936728,
+            "End": 6936773,
+            "Length": 45,
+            "Type": "STR",
+            "Priority": "TIER1_STR",
+            "Repeat": "CAG",
+            "STR1": 8,
+            "STR2": "",
+            "Gene": "SYMB1",
+            "AF Max": "-"
+        })
+
+        assert result == expected_output
+
+
     def test_tier_conversion(self):
         '''
         Test Tiers from JSON are converted into tier representation as desired
