@@ -221,6 +221,7 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "MALE"
 
         # Expected output for TIER1 STR
         expected_output = var_info.add_columns_to_dict(columns)
@@ -239,7 +240,7 @@ class TestVariantInfo():
         })
 
         # Call the function to test for TEIR1
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(variant, proband, columns, ev_idx, proband_sex)
 
         # Assertions
         assert result == expected_output
@@ -261,9 +262,10 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "FEMALE"
 
         # Call the function to test for TIER2
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(variant, proband, columns, ev_idx, proband_sex)
 
         # Expected output for TIER2 STR
         expected_output_tier = var_info.add_columns_to_dict(columns)
@@ -299,11 +301,12 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "MALE"
 
-        # Call the function to test for TIER2
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        # Call the function to test for null tier
+        result = var_info.get_str_info(variant, proband, columns, ev_idx, proband_sex)
 
-        # Expected output for TIER2 STR
+        # Expected output for null tier STR
         expected_output_tier = var_info.add_columns_to_dict(columns)
         expected_output_tier.update({
             "Chr": "12",
@@ -326,6 +329,24 @@ class TestVariantInfo():
         Check that the function returns the expected output in the case of 
         missing X STR count in XY proband.
         '''
+
+        variant["coordinates"] = {
+                "chromosome": "X",
+                "start": 6936728,
+                "end": 6936773
+            }
+        
+        variant["reportEvents"] = [
+            {
+            "tier": "TIER1",
+            "genomicEntities": [
+                {
+                "type": "gene",
+                "geneSymbol": "SYMB1"
+                }
+            ]
+            }
+        ]
 
         variant["variantCalls"] = [
                 {
@@ -352,14 +373,15 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "MALE"
 
         # Call the function to test with hemizygous proband
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(variant, proband, columns, ev_idx, proband_sex)
 
         # Expected output for hemizygous proband
         expected_output = var_info.add_columns_to_dict(columns)
         expected_output.update({
-            "Chr": "12",
+            "Chr": "X",
             "Pos": 6936728,
             "End": 6936773,
             "Length": 45,
