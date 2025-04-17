@@ -633,7 +633,7 @@ class excel():
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = s_t_r["reportEvents"].index(event)
                     var_dict = var_info.get_str_info(
-                        s_t_r, self.proband, self.column_list, event_index
+                        s_t_r, self.proband, self.column_list, event_index, self.proband_sex
                     )
                     variant_list.append(var_dict)
 

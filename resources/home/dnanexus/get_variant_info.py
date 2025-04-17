@@ -197,7 +197,7 @@ def index_participant(variant, participant_id):
     return index
 
 
-def get_str_info(variant, proband, columns, ev_idx):
+def get_str_info(variant, proband, columns, ev_idx, pb_sex):
     '''
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
@@ -233,8 +233,14 @@ def get_str_info(variant, proband, columns, ev_idx):
     var_dict["Repeat"] = variant[
         "shortTandemRepeatReferenceData"
     ]["repeatedSequence"]
+    # Get the repeat number from the JSON for one allele
     var_dict["STR1"] = num_copies(variant, pb_idx, 0)
-    var_dict["STR2"] = num_copies(variant, pb_idx, 1)
+    # Get the repeat number from the JSON for the other allele 
+    # only if the STR is not in the X chromosome of a XY proband
+    if var_dict["Chr"] in ["X"] and pb_sex == "MALE":
+        var_dict["STR2"] = ""
+    else:
+        var_dict["STR2"] = num_copies(variant, pb_idx, 1)
     var_dict["Gene"] = get_gene_symbol(variant)
     var_dict["AF Max"] = get_af_max(variant)
     return var_dict
