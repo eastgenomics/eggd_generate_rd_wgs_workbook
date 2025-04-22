@@ -159,48 +159,51 @@ class TestInterpretationService():
 
 class TestVariantInfo():
 
-    variant = {
-            "coordinates": {
-                "chromosome": "12",
-                "start": 6936728,
-                "end": 6936773
-            },
-            "reportEvents": [
-                {
-                    "tier": "TIER1",
-                    "genomicEntities": [
-                        {
-                            "type": "gene",
-                            "geneSymbol": "SYMB1"
-                        }
-                    ]
+    @pytest.fixture
+    def mock_variant(self):
+        variant = {
+                "coordinates": {
+                    "chromosome": "12",
+                    "start": 6936728,
+                    "end": 6936773
                 },
-                {
-                    "tier": "TIER2",
-                    "genomicEntities": [
-                        {
-                            "type": "gene",
-                            "geneSymbol": "SYMB1"
-                        }
-                    ]
+                "reportEvents": [
+                    {
+                        "tier": "TIER1",
+                        "genomicEntities": [
+                            {
+                                "type": "gene",
+                                "geneSymbol": "SYMB1"
+                            }
+                        ]
+                    },
+                    {
+                        "tier": "TIER2",
+                        "genomicEntities": [
+                            {
+                                "type": "gene",
+                                "geneSymbol": "SYMB1"
+                            }
+                        ]
+                    }
+                ],
+                "shortTandemRepeatReferenceData": {
+                    "repeatedSequence": "CAG"
+                },
+                "variantCalls": [
+                    {
+                        "participantId": "testPB",
+                        "numberOfCopies": [
+                            {"numberOfCopies": 8},
+                            {"numberOfCopies": 16}
+                        ]
+                    }
+                ],
+                "variantAttributes": {
+                    "alleleFrequencies": ""
                 }
-            ],
-            "shortTandemRepeatReferenceData": {
-                "repeatedSequence": "CAG"
-            },
-            "variantCalls": [
-                {
-                    "participantId": "testPB",
-                    "numberOfCopies": [
-                        {"numberOfCopies": 8},
-                        {"numberOfCopies": 16}
-                    ]
-                }
-            ],
-            "variantAttributes": {
-                "alleleFrequencies": ""
             }
-        }
+        return variant
 
     '''
     Test variant info functions.
@@ -215,12 +218,13 @@ class TestVariantInfo():
             column_list
         ) == {"ColA": '', "ColB": ''}
 
-    def test_get_str_info_tier1(self, variant=variant):
+    def test_get_str_info_tier1(self, mock_variant):
     # Mock input data
         
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "MALE"
 
         # Expected output for TIER1 STR
         expected_output = var_info.add_columns_to_dict(columns)
@@ -239,14 +243,14 @@ class TestVariantInfo():
         })
 
         # Call the function to test for TEIR1
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(mock_variant, proband, columns, ev_idx, proband_sex)
 
         # Assertions
         assert result == expected_output
 
-    def test_get_str_info_tier2(self, variant=variant):
+    def test_get_str_info_tier2(self, mock_variant):
          # Modify the variant to replace reportEvents with TIER2 events
-        variant["reportEvents"] = [
+        mock_variant["reportEvents"] = [
             {
             "tier": "TIER2",
             "genomicEntities": [
@@ -261,9 +265,10 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "FEMALE"
 
         # Call the function to test for TIER2
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        result = var_info.get_str_info(mock_variant, proband, columns, ev_idx, proband_sex)
 
         # Expected output for TIER2 STR
         expected_output_tier = var_info.add_columns_to_dict(columns)
@@ -283,8 +288,8 @@ class TestVariantInfo():
 
         assert result == expected_output_tier
 
-    def test_get_str_info_tier_null(self, variant=variant):
-        variant["reportEvents"] = [
+    def test_get_str_info_tier_null(self, mock_variant):
+        mock_variant["reportEvents"] = [
             {
             "tier": "null",
             "genomicEntities": [
@@ -299,11 +304,12 @@ class TestVariantInfo():
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
+        proband_sex = "MALE"
 
-        # Call the function to test for TIER2
-        result = var_info.get_str_info(variant, proband, columns, ev_idx)
+        # Call the function to test for null tier
+        result = var_info.get_str_info(mock_variant, proband, columns, ev_idx, proband_sex)
 
-        # Expected output for TIER2 STR
+        # Expected output for null tier STR
         expected_output_tier = var_info.add_columns_to_dict(columns)
         expected_output_tier.update({
             "Chr": "12",
@@ -320,6 +326,79 @@ class TestVariantInfo():
         })
 
         assert result == expected_output_tier
+
+    def test_get_str_info_hemizygous(self, mock_variant):
+        '''
+        Check that the function returns the expected output in the case of 
+        missing X STR count in XY proband.
+        '''
+
+        mock_variant["coordinates"] = {
+                "chromosome": "X",
+                "start": 6936728,
+                "end": 6936773
+            }
+        
+        mock_variant["reportEvents"] = [
+            {
+            "tier": "TIER1",
+            "genomicEntities": [
+                {
+                "type": "gene",
+                "geneSymbol": "SYMB1"
+                }
+            ]
+            }
+        ]
+
+        mock_variant["variantCalls"] = [
+                {
+                    "participantId": "testPB",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 8}
+                    ]
+                },
+                {
+                    "participantId": "testT2",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 14},
+                        {"numberOfCopies": 16}
+                    ]
+                },
+                {
+                    "participantId": "testT3",
+                    "numberOfCopies": [
+                        {"numberOfCopies": 8}
+                    ]
+                }
+            ]
+        
+        proband = "testPB"
+        columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
+        ev_idx = 0
+        proband_sex = "MALE"
+
+        # Call the function to test with hemizygous proband
+        result = var_info.get_str_info(mock_variant, proband, columns, ev_idx, proband_sex)
+
+        # Expected output for hemizygous proband
+        expected_output = var_info.add_columns_to_dict(columns)
+        expected_output.update({
+            "Chr": "X",
+            "Pos": 6936728,
+            "End": 6936773,
+            "Length": 45,
+            "Type": "STR",
+            "Priority": "TIER1_STR",
+            "Repeat": "CAG",
+            "STR1": 8,
+            "STR2": "",
+            "Gene": "SYMB1",
+            "AF Max": "-"
+        })
+
+        assert result == expected_output
+
 
     def test_tier_conversion(self):
         '''
