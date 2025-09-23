@@ -252,6 +252,18 @@ class excel():
                 f"HPO version in JSON {version} not found in config\n"
                 f"{self.config}"
             )
+        # Get termPresence from JSON
+        term_presence = self.wgs_data[
+                    "interpretation_request_data"
+                ]['json_request']["pedigree"][
+            "members"
+            ][0]["hpoTermList"][0]['termPresence']
+
+        # If termPresence is unknown, remove variant from workbook
+        for k, v in filter(lambda item: item[1].get(term_presence, 'unknown') != "unknown", \
+        self.config['obos'].items()):
+            # process each variant if known
+            pass
 
         dxpy.download_dxfile(obo, "hpo.obo")
 
