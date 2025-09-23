@@ -43,7 +43,7 @@ class TestWorkbook():
                         },
                         {
                             'penetrance': 'incomplete',
-                            'specificDisease': 'OtherDisease'                   
+                            'specificDisease': 'OtherDisease'
                         }
                     ],
                     'analysisPanels': [
@@ -220,7 +220,7 @@ class TestVariantInfo():
 
     def test_get_str_info_tier1(self, mock_variant):
     # Mock input data
-        
+
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
@@ -545,3 +545,32 @@ class TestVariantNomenclature():
         assert var_info.look_up_id_in_refseq_mane_conversion_file(
             refseq_tsv, "ENST0000033", "ENSP"
         ) == "ENSP0000044"
+
+
+class TestHpoUnknownFiltering():
+    '''
+    Tests for HPO unknown filtering function when "termPresence" is "unknown"
+    '''
+    def test_hpo_unknown_filtering(self):
+        '''
+        Test that HPO terms with "termPresence" of "unknown" are filtered out
+        '''
+        hpo_terms = [
+            {
+                "hpoId": "HP:0004322",
+                "termPresence": "present"
+            },
+            {
+                "hpoId": "HP:0001249",
+                "termPresence": "unknown"
+            }
+        ]
+
+        filtered_terms = excel.filter_hpo_terms(hpo_terms)
+
+        assert filtered_terms == [
+            {
+                "hpoId": "HP:0004322",
+                "termPresence": "present"
+            }
+        ]
