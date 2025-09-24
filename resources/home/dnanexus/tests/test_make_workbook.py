@@ -329,7 +329,7 @@ class TestVariantInfo():
 
     def test_get_str_info_hemizygous(self, mock_variant):
         '''
-        Check that the function returns the expected output in the case of 
+        Check that the function returns the expected output in the case of
         missing X STR count in XY proband.
         '''
 
@@ -338,7 +338,7 @@ class TestVariantInfo():
                 "start": 6936728,
                 "end": 6936773
             }
-        
+
         mock_variant["reportEvents"] = [
             {
             "tier": "TIER1",
@@ -372,7 +372,7 @@ class TestVariantInfo():
                     ]
                 }
             ]
-        
+
         proband = "testPB"
         columns = ["Chr", "Pos", "End", "Length", "Type", "Priority", "Repeat", "STR1", "STR2", "Gene", "AF Max"]
         ev_idx = 0
@@ -403,7 +403,7 @@ class TestVariantInfo():
     def test_tier_conversion(self):
         '''
         Test Tiers from JSON are converted into tier representation as desired
-        by workbook. Workbook tiers should include the tier and the variant 
+        by workbook. Workbook tiers should include the tier and the variant
         type
         '''
         tiers_to_convert = [
@@ -439,7 +439,7 @@ class TestVariantInfo():
             ]
         }}
         assert var_info.get_af_max(variant) == '0.001'
-    
+
     def test_male_proband_X_SNV_is_hemizygous(self):
         '''
         Placeholder for testing male proband X SNV hemizygosity.
@@ -551,26 +551,35 @@ class TestHpoUnknownFiltering():
     '''
     Tests for HPO unknown filtering function when "termPresence" is "unknown"
     '''
-    def test_hpo_unknown_filtering(self):
+    @mock.patch('obonet.read_obo')
+    def test_hpo_unknown_filtering_in_get_hpo_terms(self, mock_obo):
         '''
-        Test that HPO terms with "termPresence" of "unknown" are filtered out
+        Test get_hpo_terms function filters out terms with "termPresence" of "unknown"
         '''
-        hpo_terms = [
-            {
-                "hpoId": "HP:0004322",
-                "termPresence": "present"
-            },
-            {
-                "hpoId": "HP:0001249",
-                "termPresence": "unknown"
-            }
-        ]
+        # Mock obo data
+        mock_graph = MagicMock()
+        mock_graph.nodes = {
+            "HP:0004322": {"name": "Short stature"},
+            "HP:0001249": {"name": "Intellectual disability"}
+        }
+        mock_obo.return_value = mock_graph
 
-        filtered_terms = excel.filter_hpo_terms(hpo_terms)
+        # Mock member data with mixed termPresence values
+        member = {
+            "hpoTermList": [
+                {
+                    "term": "HP:0004322",
+                    "termPresence": "present"
+                },
+                {
+                    "term": "HP:0001249",
+                    "termPresence": "unknown"
+                }
+            ]
+        }
 
-        assert filtered_terms == [
-            {
-                "hpoId": "HP:0004322",
-                "termPresence": "present"
-            }
-        ]
+        excel_instance = excel()
+        result = excel_instance.get_hpo_terms(member)
+
+        # Should only include the "present" only
+        assert len(result) == 1
