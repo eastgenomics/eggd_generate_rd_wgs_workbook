@@ -284,10 +284,7 @@ class excel():
             for term in hpo_terms:
                 hpo_dict = graph.nodes[term]
                 hpo_name = hpo_dict['name']
-                hpo_names.append(hpo_name)
-            for i in member["hpoTermList"]:
-                if i.get("termPresence") != "unknown":
-                    hpo_terms.append(i["term"])
+                hpo_names.append(hpo_name != "unknown")
 
             hpo_names = '; '.join(hpo_names)
 
