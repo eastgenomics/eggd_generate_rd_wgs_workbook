@@ -255,6 +255,13 @@ class excel():
 
         dxpy.download_dxfile(obo, "hpo.obo")
 
+    @staticmethod
+    def filter_hpo_terms(hpo_terms):
+        """Return HPO terms not marked as termPresence == 'unknown'."""
+        if not hpo_terms:
+            return []
+        return [t for t in hpo_terms if t.get('termPresence') != 'unknown']
+
     def get_hpo_terms(self, member):
         '''
         Use obo hpo term ontology (.obo) file to convert HPO IDs to names.
@@ -277,7 +284,7 @@ class excel():
             for term in hpo_terms:
                 hpo_dict = graph.nodes[term]
                 hpo_name = hpo_dict['name']
-                hpo_names.append(hpo_name)
+                hpo_names.append(hpo_name != "unknown")
 
             hpo_names = '; '.join(hpo_names)
 
@@ -643,7 +650,7 @@ class excel():
             ][self.genome_data_format]["structuralVariants"]:
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
-                # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B 
+                # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B
                 # GEL updated the nomenclature in 2024
                 if cnv["reportEvents"][event_index]["tier"] in [
                     "TIER1", "TIERA", "TIER2", "TIERB"
@@ -868,7 +875,7 @@ class excel():
         '''
         cnv = self.workbook.create_sheet(f"cnv_interpret_{cnv_sheet_num}")
         titles = {
-            "Intragenic CNVs should be analysed using SNV guidelines": [1,2], 
+            "Intragenic CNVs should be analysed using SNV guidelines": [1,2],
             "Chromosomal region/gene": [3, 2],
             "Start": [3, 3],
             "Stop": [3, 4],
@@ -885,17 +892,17 @@ class excel():
         }
 
         content = {
-            "Does the CNV contain protein coding genes? How many?": [8,2], 
-            "OMIM/green genes?": [9,2], 
-            "Any disease genes relevant to phenotype?": [10,2], 
-            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12,2], 
+            "Does the CNV contain protein coding genes? How many?": [8,2],
+            "OMIM/green genes?": [9,2],
+            "Any disease genes relevant to phenotype?": [10,2],
+            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12,2],
             "Does this CNV overlap with a known microdeletion or "
-            "microduplication syndrome? Check decipher, pubmed, new " 
-            "ACMG CNV guidelines Table S3": [14,2], 
+            "microduplication syndrome? Check decipher, pubmed, new "
+            "ACMG CNV guidelines Table S3": [14,2],
             "Similar CNVs in HGMD, decipher, pubmed listed as pathogenic?"
             "Are they de novo? Do they segregate with disease in the reported"
-            "family?": [16, 2], 
-            "Does gene of interest have evidence of HI/TS?": [17,2], 
+            "family?": [16, 2],
+            "Does gene of interest have evidence of HI/TS?": [17,2],
             "In this case is the CNV de novo, inherited, unknown? Good "
             "phenotype fit? Non-segregation in affected family"
             "members?": [19, 2],
