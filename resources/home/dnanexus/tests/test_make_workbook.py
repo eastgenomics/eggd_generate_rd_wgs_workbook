@@ -547,7 +547,7 @@ class TestVariantNomenclature():
         ) == "ENSP0000044"
 
 
-class TestHpoUnknownFiltering():
+class TestHpoTerms():
     '''
     Tests for HPO unknown filtering function when "termPresence" is "unknown"
     '''
@@ -582,4 +582,10 @@ class TestHpoUnknownFiltering():
         result = excel_instance.get_hpo_terms(member)
 
         # Should only include the "present" only
-        assert len(result) == 1
+        filtered_terms = [
+            {
+                "term": "HP:0004322",
+                "termPresence": "present"
+            }
+        ]
+        assert result == filtered_terms
