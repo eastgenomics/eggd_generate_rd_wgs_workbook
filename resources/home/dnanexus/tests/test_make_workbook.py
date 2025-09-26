@@ -582,10 +582,4 @@ class TestHpoTerms():
         result = excel_instance.get_hpo_terms(member)
 
         # Should only include the "present" only
-        filtered_terms = [
-            {
-                "term": "HP:0004322",
-                "termPresence": "present"
-            }
-        ]
-        assert result == filtered_terms
+        assert result == [{"term": "HP:0004322", "termPresence": "present"}]
