@@ -183,7 +183,7 @@ class excel():
             (1, 9): str(
                 self.wgs_data[
                     "interpretation_request_data"
-                ]['json_request']['interpretationFlags']
+                ]['json_request']['interpretation_flags']
             ),
             (1, 2): self.wgs_data["family_id"],
         }
