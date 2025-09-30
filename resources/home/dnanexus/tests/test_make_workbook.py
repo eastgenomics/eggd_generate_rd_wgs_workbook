@@ -583,3 +583,28 @@ class TestHpoTerms():
 
         # Should only include the "present" only
         assert result == [{"term": "HP:0004322", "termPresence": "present"}]
+
+
+class TestInterpretationFlags():
+    '''
+    Tests for interpretation flags extraction from JSON request
+    '''
+    wgs_data = {
+        "interpretation_request_data": {
+            "json_request": {
+                "interpretation_flags": "Flag1, Flag2, Flag3"
+            }
+        },
+    }
+    summary_content = {}
+
+    def test_interpretation_flags_extraction(self):
+        '''
+        Test that interpretation flags are correctly extracted from JSON request
+        and added to summary_content dictionary.
+        '''
+        excel.get_interpretation_flags(self)
+        assert self.summary_content == {
+            (1, 8): 'Flag1, Flag2, Flag3',
+            (1, 9): 'Flag1, Flag2, Flag3'
+        }

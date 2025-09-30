@@ -183,7 +183,9 @@ class excel():
             (1, 9): str(
                 self.wgs_data[
                     "interpretation_request_data"
-                ]['json_request']['interpretation_flags']
+                ]['json_request'][
+                    next(k for k in self.wgs_data["interpretation_request_data"]['json_request'] if re.fullmatch("interpretation_flags", k, re.IGNORECASE))
+                    ]
             ),
             (1, 2): self.wgs_data["family_id"],
         }
