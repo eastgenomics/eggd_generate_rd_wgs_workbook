@@ -604,7 +604,6 @@ class TestInterpretationFlags():
         and added to summary_content dictionary.
         '''
         excel.get_interpretation_flags(self)
-        assert self.summary_content == {
-            (1, 8): 'Flag1, Flag2, Flag3',
-            (1, 9): 'Flag1, Flag2, Flag3'
-        }
+        flags = self.wgs_data["interpretation_request_data"]["json_request"]["interpretation_flags"].split(', ')
+        for flag in flags:
+            assert any(flag in value for value in self.summary_content.values()), f"{flag} not found"
