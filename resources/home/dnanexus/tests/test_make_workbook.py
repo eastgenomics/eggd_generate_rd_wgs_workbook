@@ -603,7 +603,7 @@ class TestInterpretationFlags():
         Test that interpretation flags are correctly extracted from JSON request
         and added to summary_content dictionary.
         '''
-        excel.get_interpretation_flags(self)
+        excel.summary_page(self)
         flags = self.wgs_data["interpretation_request_data"]["json_request"]["interpretation_flags"].split(', ')
         for flag in flags:
             assert any(flag in value for value in self.summary_content.values()), f"{flag} not found"
