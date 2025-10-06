@@ -577,12 +577,12 @@ class TestHpoTerms():
                 }
             ]
         }
-
-        excel_instance = excel()
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
         result = excel_instance.get_hpo_terms(member)
 
         # Should only include the "present" only
-        assert result == [{"term": "HP:0004322", "termPresence": "present"}]
+        assert result == "Short stature"
 
 
 class TestInterpretationFlags():
@@ -590,6 +590,7 @@ class TestInterpretationFlags():
     Tests for interpretation flags extraction from JSON request
     '''
     wgs_data = {
+        "family_id": "FAM12345",
         "interpretation_request_data": {
             "json_request": {
                 "interpretation_flags": "Flag1, Flag2, Flag3"
@@ -598,12 +599,16 @@ class TestInterpretationFlags():
     }
     summary_content = {}
 
-    def test_interpretation_flags_extraction(self):
+    def test_interpretation_flags_extraction(self,wgs_data=wgs_data):
         '''
         Test that interpretation flags are correctly extracted from JSON request
         and added to summary_content dictionary.
         '''
-        excel.summary_page(self)
-        flags = self.wgs_data["interpretation_request_data"]["json_request"]["interpretation_flags"].split(', ')
-        for flag in flags:
-            assert any(flag in value for value in self.summary_content.values()), f"{flag} not found"
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
+        result = excel_instance.get_summary_content(wgs_data)
+        summary_content = result.get((1, 9))
+        #flags = self.wgs_data["interpretation_request_data"]["json_request"]["interpretation_flags"].split(', ')
+        expected_flags = "Flag1, Flag2, Flag3"
+        assert summary_content == expected_flags
+        assert result[(1, 2)] == "FAM12345"

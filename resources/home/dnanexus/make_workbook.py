@@ -178,17 +178,7 @@ class excel():
             (37, 1): "Primary analysis",
             (38, 1): "Data check",
         }
-
-        self.summary_content = {
-            (1, 9): str(
-                self.wgs_data[
-                    "interpretation_request_data"
-                ]['json_request'][
-                    next(k for k in self.wgs_data["interpretation_request_data"]['json_request'] if re.fullmatch("interpretation_flags", k, re.IGNORECASE))
-                    ]
-            ),
-            (1, 2): self.wgs_data["family_id"],
-        }
+        self.summary_content = {(1, 9): str(get_summary_content())}
 
         # Add panel data, penetrance data and data about family members
         self.get_panels()
@@ -224,6 +214,15 @@ class excel():
         }
 
         ExcelStyles.borders(self, row_ranges, summary_sheet)
+
+    def get_summary_content(self,data):
+        return {
+            (1, 9): str(data["interpretation_request_data"]['json_request'][
+                            next(k for k in data["interpretation_request_data"]['json_request'] if re.fullmatch("interpretation_flags", k, re.IGNORECASE))
+
+                            ]
+                        ),
+                    (1, 2): data["family_id"]}
 
     def get_hpo_obo(self):
         '''
@@ -279,17 +278,18 @@ class excel():
         hpo_names = []
         if member["hpoTermList"]:
             graph = obonet.read_obo("hpo.obo")
-            # Read in HPO IDs from JSON
+            # Read in HPO IDs from JSON, filtering out "unknown" termPresence
             for i in member["hpoTermList"]:
-                hpo_terms.append(i["term"])
+                if i.get("termPresence") != "unknown":
+                    hpo_terms.append(i["term"])
             # Convert term to name using obo file
             for term in hpo_terms:
                 hpo_dict = graph.nodes[term]
                 hpo_name = hpo_dict['name']
-                hpo_names.append(hpo_name != "unknown")
+                if hpo_name != "unknown":
+                    hpo_names.append(hpo_name)
 
-            hpo_names = '; '.join(hpo_names)
-
+            hpo_names = '; '.join(hpo_names) if hpo_names else None
         else:
             hpo_names = None
 
