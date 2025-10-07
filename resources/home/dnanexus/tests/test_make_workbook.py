@@ -608,7 +608,6 @@ class TestInterpretationFlags():
         excel_instance = excel(mock_args)
         result = excel_instance.get_summary_content(wgs_data)
         summary_content = result.get((1, 9))
-        #flags = self.wgs_data["interpretation_request_data"]["json_request"]["interpretation_flags"].split(', ')
         expected_flags = "Flag1, Flag2, Flag3"
         assert summary_content == expected_flags
         assert result[(1, 2)] == "FAM12345"
