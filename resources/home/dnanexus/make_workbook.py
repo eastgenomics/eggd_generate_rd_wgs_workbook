@@ -178,7 +178,7 @@ class excel():
             (37, 1): "Primary analysis",
             (38, 1): "Data check",
         }
-        self.summary_content = {(1, 9): str(get_summary_content())}
+        self.summary_content = self.get_summary_content(self.wgs_data)
 
         # Add panel data, penetrance data and data about family members
         self.get_panels()
