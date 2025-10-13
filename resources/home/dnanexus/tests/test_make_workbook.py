@@ -577,9 +577,37 @@ class TestHpoTerms():
                 }
             ]
         }
-
-        excel_instance = excel()
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
         result = excel_instance.get_hpo_terms(member)
 
         # Should only include the "present" only
-        assert result == [{"term": "HP:0004322", "termPresence": "present"}]
+        assert result == "Short stature"
+
+
+class TestInterpretationFlags():
+    '''
+    Tests for interpretation flags extraction from JSON request
+    '''
+    wgs_data = {
+        "family_id": "FAM12345",
+        "interpretation_request_data": {
+            "json_request": {
+                "interpretation_flags": "Flag1, Flag2, Flag3"
+            }
+        },
+    }
+    summary_content = {}
+
+    def test_interpretation_flags_extraction(self,wgs_data=wgs_data):
+        '''
+        Test that interpretation flags are correctly extracted from JSON request
+        and added to summary_content dictionary.
+        '''
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
+        result = excel_instance.get_summary_content(wgs_data)
+        summary_content = result.get((1, 9))
+        expected_flags = "Flag1, Flag2, Flag3"
+        assert summary_content == expected_flags
+        assert result[(1, 2)] == "FAM12345"
