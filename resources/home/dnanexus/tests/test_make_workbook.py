@@ -611,3 +611,34 @@ class TestInterpretationFlags():
         expected_flags = "Flag1, Flag2, Flag3"
         assert summary_content == expected_flags
         assert result[(1, 2)] == "FAM12345"
+
+
+class TestWorkbookName:
+    def test_workbook_name_generation(self):
+        family_id = "FAM12345"
+        expected_workbook_name = f"{family_id}.xlsx"
+
+        mock_args = MagicMock()
+        mock_args.output_filename = None
+        mock_args.acmg = None
+        mock_args.cnv = None
+
+        excel_instance = excel(mock_args)
+        excel_instance.wgs_data = {'family_id': family_id}
+
+        with patch.object(excel_instance, 'open_files'), \
+             patch('dxpy.find_data_objects', return_value=[]), \
+             patch('pandas.ExcelWriter'), \
+             patch.object(excel_instance, 'summary_page'), \
+             patch.object(excel_instance, 'get_interpreted_genome_format'), \
+             patch.object(excel_instance, 'index_interpretation_services'), \
+             patch.object(excel_instance, 'create_gel_tiering_variant_page'), \
+             patch.object(excel_instance, 'create_additional_analysis_page'), \
+             patch.object(excel_instance, 'str_image_page'), \
+             patch.object(excel_instance, 'writer', create=True), \
+             patch.object(excel_instance, 'workbook', create=True), \
+             patch('excel_styles.DropDown.drop_down'):
+
+            excel_instance.generate()
+        print("Generated filename:", excel_instance.args.output_filename)
+        assert excel_instance.args.output_filename == expected_workbook_name
