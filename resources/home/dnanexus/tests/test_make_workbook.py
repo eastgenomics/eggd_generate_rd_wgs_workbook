@@ -615,6 +615,9 @@ class TestInterpretationFlags():
 
 class TestWorkbookName:
     def test_workbook_name_generation(self):
+        """
+        Test that the workbook name is generated correctly based on family_id.
+        """
         family_id = "FAM12345"
         expected_workbook_name = f"{family_id}.xlsx"
 
