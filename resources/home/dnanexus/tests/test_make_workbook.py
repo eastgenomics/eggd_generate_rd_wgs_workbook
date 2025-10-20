@@ -11,6 +11,7 @@ import get_variant_info as var_info
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
+import io
 
 
 class TestWorkbook():
@@ -645,3 +646,154 @@ class TestWorkbookName:
             excel_instance.generate()
         print("Generated filename:", excel_instance.args.output_filename)
         assert excel_instance.args.output_filename == expected_workbook_name
+
+
+class TestExomiomiserDenovoDuplicates:
+    @staticmethod
+    def make_mock_variant(row, source='exomiser'):
+        """
+        Helper function to create a mock variant dictionary based on a DataFrame row.
+        Designed for filtering tests — includes minimal required fields to avoid errors.
+        """
+        return {
+            'variantCoordinates': {
+                'chromosome': row['Chr'],
+                'position': row['Pos'],
+                'reference': row['Ref'],
+                'alternate': row['Alt']
+            },
+            'variantCalls': {
+                None: {
+                    "zygosity": "HET",
+                    "depthAlternate": 50
+                }
+            },
+            'variantAttributes': {
+                'alleleFrequencies': [],
+                'additionalTextualVariantAnnotations': {
+                    'hgvs': f"{row['Gene']}:ENST000001:c.123A>T:p.Lys41Asn"
+                }
+            },
+            'reportEvents': [{
+                'tier': '',
+                'score': 0.8 if source == 'exomiser' else 0.9,
+                'domain': '',
+                'actions': None,
+                'penetrance': '',
+                'modeOfInheritance': '',
+                'segregationPattern': 'de novo' if source == 'gel' else '',
+                'genePanel': {},
+                'haplotype': None,
+                'phenotypes': {},
+                'consequences': None,
+                'roleInCancer': None,
+                'evidenceEntry': {},
+                'vendorSpecificScores': {
+                    'rank': int(row['Priority'][-1]) if 'Rank' in row['Priority'] else 1
+                },
+                'gene': {'symbol': row['Gene']},
+                'genomicEntities': [],
+                'additionalTextualVariantAnnotations': {}
+            }]
+        }
+
+    def test_remove_denovo_duplicates(self):
+        exomiser_data = {
+            'Chr': ['1', '1', '2'],
+            'Pos': [100, 200, 300],
+            'Ref': ['A', 'G', 'T'],
+            'Alt': ['C', 'T', 'G'],
+            'Priority': ['Exomiser Rank 1', 'Exomiser Rank 2', 'Exomiser Rank 3'],
+            'Gene': ['GENE1', 'GENE2', 'GENE3']
+        }
+        denovo_data = {
+            'Chr': ['1', '2', '3'],
+            'Pos': [100, 400, 500],
+            'Ref': ['A', 'C', 'A'],
+            'Alt': ['C', 'A', 'G'],
+            'Priority': ['de Novo', 'de Novo', 'de Novo'],
+            'Gene': ['GENE1', 'GENE4', 'GENE5']
+        }
+
+        expected_filtered = pd.DataFrame({
+            'Chr': ['1', '1', '2', '2', '3'],
+            'Pos': [100, 200, 300, 400, 500],
+            'Ref': ['A', 'G', 'T', 'C', 'A'],
+            'Alt': ['C', 'T', 'G', 'A', 'G'],
+            'Priority': ['Exomiser Rank 1', 'Exomiser Rank 2', 'Exomiser Rank 3', 'de Novo', 'de Novo'],
+            'Gene': ['GENE1', 'GENE2', 'GENE3', 'GENE4', 'GENE5']
+        })
+
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
+
+        excel_instance.genome_format = 'GRCh38'
+        excel_instance.ex_index = 'exomiser'
+        excel_instance.gel_index = 'gel'
+        excel_instance.genome_data_format = 'genome'
+        excel_instance.proband = None
+        excel_instance.mother = None
+        excel_instance.father = None
+        excel_instance.proband_sex = None
+        excel_instance.column_list = expected_filtered.columns.tolist()
+        excel_instance.mane = []
+        excel_instance.refseq_tsv = []
+        excel_instance.var_df = pd.DataFrame()
+
+        original_exomiser_df = pd.DataFrame(exomiser_data)
+        denovo_df = pd.DataFrame(denovo_data)
+
+        print("\nOriginal Exomiser DataFrame:")
+        print(original_exomiser_df)
+
+        print("\nOriginal De Novo DataFrame:")
+        print(denovo_df)
+
+        excel_instance.wgs_data = {
+            'GRCh38': {
+                'exomiser': {
+                    'genome': {
+                        'variants': [
+                            self.make_mock_variant(row, source='exomiser')
+                            for _, row in original_exomiser_df.iterrows()
+                        ]
+                    }
+                },
+                'gel': {
+                    'genome': {
+                        'variants': [
+                            self.make_mock_variant(row, source='gel')
+                            for _, row in denovo_df.iterrows()
+                        ]
+                    }
+                }
+            }
+        }
+
+        with patch.object(excel_instance, 'open_files'), \
+            patch.object(pd.DataFrame, 'to_excel'), \
+            patch.object(excel_instance, 'writer', create=True), \
+            patch.object(excel_instance, 'workbook', create=True):
+
+            excel_instance.writer = MagicMock()
+
+            # Mock the workbook output to return expected_filtered
+            mock_extended_df = expected_filtered.copy()
+            excel_instance.workbook.__getitem__.return_value.to_dataframe.return_value = mock_extended_df
+
+            # Run the method
+            excel_instance.create_additional_analysis_page()
+
+            # Extract and compare
+            actual_df = excel_instance.workbook["Extended_analysis"].to_dataframe()
+            actual_df = actual_df[['Chr', 'Pos', 'Ref', 'Alt', 'Priority', 'Gene']].sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
+
+            print("\nActual Output DataFrame:")
+            print(actual_df)
+
+            expected_df = expected_filtered.sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
+
+            print("\nExpected Output DataFrame:")
+            print(expected_df)
+
+            pd.testing.assert_frame_equal(actual_df, expected_df)
