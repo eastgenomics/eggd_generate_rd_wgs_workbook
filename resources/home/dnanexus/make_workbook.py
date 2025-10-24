@@ -843,19 +843,12 @@ class excel():
                 list(merge_df.filter(regex='.*\_y'))
             )]
 
-        if not ex_df.empty:
-            # Separate de novo and exomiser variants using case-insensitive match
-            denovo_df = ex_df[ex_df['Priority'].str.lower() == "de novo"].copy()
-            exomiser_df = ex_df[ex_df['Priority'].str.lower() != "de novo"].copy()
-
             if not exomiser_df.empty:
                 exomiser_df = var_info.get_top_3_ranked(exomiser_df)
-
-            # Convert to str for comparison
+                # Convert to str for comparison
                 for col in ['Chr', 'Pos', 'Ref', 'Alt']:
                     denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
                     exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
-
                 # Remove duplicates from denovo_df that match exomiser_df
                 merged = pd.merge(
                     denovo_df,
@@ -865,7 +858,7 @@ class excel():
                     indicator=True
                 )
                 denovo_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
-                self.denovo_df = denovo_df.copy()
+            self.denovo_df = denovo_df.copy()
 
             # Combine filtered de novo and exomiser variants
             ex_df = pd.concat([exomiser_df, denovo_df], ignore_index=True)
