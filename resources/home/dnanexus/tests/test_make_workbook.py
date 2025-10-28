@@ -771,9 +771,8 @@ class TestExomiomiserDenovoDuplicates:
         }
 
         captured = {}
-        def _capture(self_df, **kwargs):
-            print("Captured DataFrame type:", type(self_df))
-            print("Captured kwargs:", kwargs)
+
+        def test_capture(self_df, **kwargs):
             # Only capture the Extended_analysis sheet
             if kwargs.get('sheet_name') == 'Extended_analysis':
                 if isinstance(self_df, pd.DataFrame):
@@ -788,7 +787,7 @@ class TestExomiomiserDenovoDuplicates:
             patch.object(excel_instance, 'writer', create=True), \
             patch.object(excel_instance, 'workbook', create=True):
 
-            to_excel_mock.side_effect = _capture
+            to_excel_mock.side_effect = test_capture
             excel_instance.writer = MagicMock()
 
             # Run the method

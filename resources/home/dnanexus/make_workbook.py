@@ -852,8 +852,8 @@ class excel():
                     exomiser_df = var_info.get_top_3_ranked(exomiser_df)
                     # Convert to str for comparison
                     for col in ['Chr', 'Pos', 'Ref', 'Alt']:
-                        self.denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
-                        self.exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
+                        denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
+                        exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
                     # Remove duplicates from denovo_df that match exomiser_df
                     merged = pd.merge(
                         denovo_df,
@@ -865,9 +865,9 @@ class excel():
                     denovo_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
                 self.denovo_df = denovo_df.copy()
 
-            # Combine filtered de novo and exomiser variants
-            ex_df = pd.concat([exomiser_df, denovo_df], ignore_index=True)
-            ex_df = ex_df.sort_values(['Priority', 'Gene'])
+                # Combine filtered de novo and exomiser variants
+                ex_df = pd.concat([exomiser_df, denovo_df], ignore_index=True)
+                ex_df = ex_df.sort_values(['Priority', 'Gene'])
 
         ex_df.to_excel(
             self.writer,
