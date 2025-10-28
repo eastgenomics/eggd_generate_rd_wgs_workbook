@@ -797,7 +797,6 @@ class TestExomiomiserDenovoDuplicates:
             # Extract and compare
             actual_df = captured['Extended_analysis'][['Chr','Pos','Ref','Alt','Priority','Gene']]\
                 .sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
-
             expected_df = expected_filtered.sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
 
             pd.testing.assert_frame_equal(actual_df, expected_df)
