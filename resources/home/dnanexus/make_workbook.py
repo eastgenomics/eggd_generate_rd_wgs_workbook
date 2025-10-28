@@ -82,6 +82,7 @@ class excel():
         """
         # Initiate files and workbook to write in
         # Set RD workbooks project
+        existing_files = None
         project_id = "project-GpYqX00479VF40F06kq69Jjj"
         self.open_files()
         if not self.args.output_filename:
@@ -92,7 +93,6 @@ class excel():
                 project=project_id,
                 return_handler=True
             ))
-
         # Set filename based on whether a match was found
         if existing_files:
             self.args.output_filename = f"{self.wgs_data['family_id']}_2.xlsx"
@@ -843,22 +843,27 @@ class excel():
                 list(merge_df.filter(regex='.*\_y'))
             )]
 
-            if not exomiser_df.empty:
-                exomiser_df = var_info.get_top_3_ranked(exomiser_df)
-                # Convert to str for comparison
-                for col in ['Chr', 'Pos', 'Ref', 'Alt']:
-                    denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
-                    exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
-                # Remove duplicates from denovo_df that match exomiser_df
-                merged = pd.merge(
-                    denovo_df,
-                    exomiser_df[['Chr', 'Pos', 'Ref', 'Alt']],
-                    on=['Chr', 'Pos', 'Ref', 'Alt'],
-                    how='left',
-                    indicator=True
-                )
-                denovo_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
-            self.denovo_df = denovo_df.copy()
+            if not ex_df.empty:
+                # Separate de novo and exomiser variants using case insensitive match
+                denovo_df = ex_df[ex_df['Priority'].str.lower() == 'de novo'].copy()
+                exomiser_df = ex_df[ex_df['Priority'].str.lower() != "de novo"].copy()
+
+                if not exomiser_df.empty:
+                    exomiser_df = var_info.get_top_3_ranked(exomiser_df)
+                    # Convert to str for comparison
+                    for col in ['Chr', 'Pos', 'Ref', 'Alt']:
+                        self.denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
+                        self.exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
+                    # Remove duplicates from denovo_df that match exomiser_df
+                    merged = pd.merge(
+                        denovo_df,
+                        exomiser_df[['Chr', 'Pos', 'Ref', 'Alt']],
+                        on=['Chr', 'Pos', 'Ref', 'Alt'],
+                        how='left',
+                        indicator=True
+                    )
+                    denovo_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+                self.denovo_df = denovo_df.copy()
 
             # Combine filtered de novo and exomiser variants
             ex_df = pd.concat([exomiser_df, denovo_df], ignore_index=True)

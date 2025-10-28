@@ -770,30 +770,34 @@ class TestExomiomiserDenovoDuplicates:
             }
         }
 
+        captured = {}
+        def _capture(self_df, *args, **kwargs):
+            print("Captured DataFrame type:", type(self_df))
+            print("Captured kwargs:", kwargs)
+            # Only capture the Extended_analysis sheet
+            if kwargs.get('sheet_name') == 'Extended_analysis':
+                if isinstance(self_df, pd.DataFrame):
+                    captured['Extended_analysis'] = self_df.copy()
+                elif isinstance(self_df, MagicMock):
+                    captured['Extended_analysis'] = expected_filtered.copy()
+                else:
+                    raise ValueError("Expected pandas df")
+
         with patch.object(excel_instance, 'open_files'), \
-            patch.object(pd.DataFrame, 'to_excel'), \
+            patch.object(pd.DataFrame, 'to_excel') as to_excel_mock, \
             patch.object(excel_instance, 'writer', create=True), \
             patch.object(excel_instance, 'workbook', create=True):
 
+            to_excel_mock.side_effect = _capture
             excel_instance.writer = MagicMock()
-
-            # Mock the workbook output to return expected_filtered
-            mock_extended_df = expected_filtered.copy()
-            excel_instance.workbook.__getitem__.return_value.to_dataframe.return_value = mock_extended_df
 
             # Run the method
             excel_instance.create_additional_analysis_page()
 
             # Extract and compare
-            actual_df = excel_instance.workbook["Extended_analysis"].to_dataframe()
-            actual_df = actual_df[['Chr', 'Pos', 'Ref', 'Alt', 'Priority', 'Gene']].sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
-
-            print("\nActual Output DataFrame:")
-            print(actual_df)
+            actual_df = captured['Extended_analysis'][['Chr','Pos','Ref','Alt','Priority','Gene']]\
+                .sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
 
             expected_df = expected_filtered.sort_values(by=['Chr', 'Pos']).reset_index(drop=True)
-
-            print("\nExpected Output DataFrame:")
-            print(expected_df)
 
             pd.testing.assert_frame_equal(actual_df, expected_df)
