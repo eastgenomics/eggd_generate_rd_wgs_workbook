@@ -771,7 +771,7 @@ class TestExomiomiserDenovoDuplicates:
         }
 
         captured = {}
-        def _capture(self_df, *args, **kwargs):
+        def _capture(self_df, **kwargs):
             print("Captured DataFrame type:", type(self_df))
             print("Captured kwargs:", kwargs)
             # Only capture the Extended_analysis sheet
