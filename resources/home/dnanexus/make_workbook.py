@@ -85,21 +85,22 @@ class excel():
         existing_files = None
         project_id = "project-GpYqX00479VF40F06kq69Jjj"
         self.open_files()
-        # Search for existing .xlsx files match family_id
-        existing_files = list(dxpy.find_data_objects(
-            name_mode="glob",
-            name=f"*{self.wgs_data['family_id']}*.xlsx",
-            project=project_id,
-            return_handler=True
-        ))
-        # Set filename based on whether a match was found
-        if existing_files:
-            self.args.output_filename = f"{self.wgs_data['family_id']}_2.xlsx"
-        else:
-            self.args.output_filename = f"{self.wgs_data['family_id']}.xlsx"
-        self.writer = pd.ExcelWriter(
-            self.args.output_filename, engine='openpyxl'
-        )
+        if self.args.output_filename is None:
+            # Search for existing .xlsx files match family_id
+            existing_files = list(dxpy.find_data_objects(
+                name_mode="glob",
+                name=f"*{self.wgs_data['family_id']}*.xlsx",
+                project=project_id,
+                return_handler=True
+            ))
+            # Set filename based on whether a match was found
+            if existing_files:
+                self.args.output_filename = f"{self.wgs_data['family_id']}_2.xlsx"
+            else:
+                self.args.output_filename = f"{self.wgs_data['family_id']}.xlsx"
+            self.writer = pd.ExcelWriter(
+                self.args.output_filename, engine='openpyxl'
+            )
         self.workbook = self.writer.book
         print(f"Writing to {self.args.output_filename}...")
         # Write in workbook
