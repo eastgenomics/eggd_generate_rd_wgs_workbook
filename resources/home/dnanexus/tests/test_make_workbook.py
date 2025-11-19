@@ -11,7 +11,6 @@ import get_variant_info as var_info
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
-import io
 
 
 class TestWorkbook():
