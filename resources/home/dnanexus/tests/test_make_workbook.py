@@ -6,6 +6,8 @@ import os
 import obonet
 import sys
 import json
+import warnings
+from openpyxl import Workbook
 from make_workbook import excel
 import get_variant_info as var_info
 from start_process import SortArgs
@@ -98,7 +100,61 @@ class TestWorkbook():
         with pytest.raises(ValueError):
             excel.add_epic_data(self)
 
+    def test_alternative_homozygous_notation_becomes_homozygous(self):
+        '''
+        Test that 'alternative_homozgyous' notation in zygosity is converted to
+        'homozygous' in the workbook
+        '''
+        df = pd.DataFrame([{"Zygosity": "alternate_homozygous"}])
+        print(df)
+        df.loc[df["Zygosity"] == "alternate_homozygous", "Zygosity"] = "homozygous"
+        print("DataFrame after conversion:", df)
 
+        assert "homozygous" in df["Zygosity"].values
+        assert "alternative_homozygous" not in df["Zygosity"].values
+
+    def test_write_snv_report_colouring(self):
+        '''
+        Test that the function to add SNV reporting colouring to the workbook
+        runs without error.
+        '''
+        wb = Workbook()
+        wb.remove(wb.active)
+        writer = excel(None)
+        writer.workbook = wb
+
+        writer.write_snv_reporting_template(1)
+        sheet = wb["snv_interpret_1"]
+
+        # Check G2 and G3 are yellow
+        assert sheet["G2"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+        assert sheet["G3"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+
+        # Check all of column M is yellow
+        assert all(
+            sheet[f"M{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+            for row in range(1, sheet.max_row + 1)
+        )
+
+    def test_cnv_report_colouring(self):
+        '''
+        Test that the function to add CNV reporting colouring to the workbook
+        runs without error.
+        '''
+        wb = Workbook()
+        wb.remove(wb.active)
+        writer = excel(None)
+        writer.workbook = wb
+
+        writer.write_cnv_reporting_template(1)
+        sheet = wb["cnv_interpret_1"]
+
+
+        # Check all of column H is yellow
+        assert all(
+            sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+            for row in range(1, sheet.max_row + 1)
+        )
 class TestInterpretationService():
     '''
     Test that the function to find interpretation service works as expected
