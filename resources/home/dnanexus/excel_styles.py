@@ -3,6 +3,8 @@ from openpyxl.styles import Alignment, Border, DEFAULT_FONT, Font, Side
 from openpyxl.styles.fills import PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl import load_workbook
+from openpyxl.styles import Border, Side
+from copy import copy
 
 # openpyxl style settings
 THIN = Side(border_style="thin", color="000000")
@@ -45,7 +47,7 @@ class ExcelStyles():
                 for cells in sheet[row]:
                     for cell in cells:
                         # border style is immutable => copy current and modify
-                        cell_border = cell.border.copy()
+                        cell_border = copy(cell.border)
                         if side == 'horizontal':
                             cell_border.top = THIN
                         if side == 'horizontal_thick':
