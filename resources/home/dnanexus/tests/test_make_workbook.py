@@ -28,7 +28,7 @@ class TestWorkbook():
         }
     }
     wgs_data = {
-        "family_id": "r12345",
+        "family_id": ["r12345"],
         "interpretation_request_data": {
             "json_request": {
                 "pedigree": {
@@ -37,30 +37,81 @@ class TestWorkbook():
                             "hpoTermList": [
                                 {"hpoBuildNumber": "vXXXXXX"}
                             ]
-                        }
-                    ],
-                    'diseasePenetrances': [
-                        {
-                            'penetrance': 'complete',
-                            'specificDisease': 'Congenital malformation'
                         },
                         {
-                            'penetrance': 'incomplete',
-                            'specificDisease': 'OtherDisease'
+                            "participantId": "proband_id",
+                            "sex": "MALE",
+                            "isProband": True
                         }
                     ],
-                    'analysisPanels': [
+                    "diseasePenetrances": [
                         {
-                            'panelId': "486",
-                            'panelName': "286",
-                            'specificDisease': 'Congenital malformation',
-                            'panelVersion': "2.2"
+                            "penetrance": "complete",
+                            "specificDisease": "Congenital malformation"
+                        },
+                        {
+                            "penetrance": "incomplete",
+                            "specificDisease": "OtherDisease"
+                        }
+                    ],
+                    "analysisPanels": [
+                        {
+                            "panelId": "486",
+                            "panelName": "286",
+                            "specificDisease": "Congenital malformation",
+                            "panelVersion": "2.2"
                         }
                     ]
                 }
             }
-        }
+        },
+        "interpretedGenomes": [
+            {
+                "interpretedGenomeData": {
+                    "interpretationService": "genomics_england_tiering",
+                    "variants": [
+                        {
+                            "variantCoordinates": {
+                                "chromosome": "1",
+                                "position": 12345,
+                                "reference": "A",
+                                "alternate": "G"
+                            },
+                            "variantCalls": [
+                                {
+                                    "participantId": "proband_id",
+                                    "zygosity": "alternate_homozygous",
+                                    "depthReference": 20,
+                                    "depthAlternate": 29
+                                }
+                            ],
+                            "variantAttributes": {
+                                "alleleFrequencies": [],
+                                "additionalTextualVariantAnnotations": {
+                                    "hgvs": ["TEST:c.123A>G"]
+                                },
+                                "cdnaChanges": ["TEST:c.123A>G"],
+                                "proteinChanges": ["TEST:p.Arg123Gly"]
+                            },
+                            "reportEvents": [
+                                {
+                                    "tier": "TIER1",
+                                    "genomicEntities": [
+                                        {"geneSymbol": "TESTGENE", "type": "gene"}
+                                    ],
+                                    "penetrance": "incomplete",
+                                    "modeOfInheritance": "None"
+                                }
+                            ]
+                        }
+                    ],
+                    "shortTandemRepeats": [],
+                    "structuralVariants": []
+                }
+            }
+        ]
     }
+
 
     def test_get_panels_extracts_data_from_input_panel_json(self):
         '''
@@ -106,73 +157,11 @@ class TestWorkbook():
         Test that 'alternate_homozygous' notation in zygosity is converted to
         'homozygous' in the workbook
         """
-        # Mock GEL-tiered SNV with all fields needed
-        mock_wgs_data = {
-            "family_id": "FAM123",
-            "interpretation_request_data": {
-                "json_request": {
-                    "pedigree": {
-                        "members": [
-                            {
-                                "participantId": "proband_id",
-                                "sex": "MALE",
-                                "isProband": True,
-                            }
-                        ]
-                    }
-                }
-            },
-            "interpretedGenomes": [
-                {
-                    "interpretedGenomeData": {
-                        "interpretationService": "genomics_england_tiering",
-                        "variants": [
-                            {
-                                "variantCoordinates": {
-                                    "chromosome": "1",
-                                    "position": 12345,
-                                    "reference": "A",
-                                    "alternate": "G",
-                                },
-                                "variantCalls": [
-                                    {
-                                        "participantId": "proband_id",
-                                        "zygosity": "alternate_homozygous",
-                                        "depthReference": 20,
-                                        "depthAlternate": 29,
-                                    }
-                                ],
-                                "variantAttributes": {
-                                    "alleleFrequencies": [],
-                                    "additionalTextualVariantAnnotations": {
-                                        "hgvs": ["TEST:c.123A>G"]
-                                    },
-                                    "cdnaChanges": ["TEST:c.123A>G"],
-                                    "proteinChanges": ["TEST:p.Arg123Gly"],
-                                },
-                                "reportEvents": [
-                                    {
-                                        "tier": "TIER1",
-                                        "genomicEntities": [
-                                            {"geneSymbol": "TESTGENE", "type": "gene"}
-                                        ],
-                                        "penetrance": "incomplete",
-                                        "modeOfInheritance": "None"
-                                    }
-                                ],
-                            }
-                        ],
-                        "shortTandemRepeats": [],
-                        "structuralVariants": []
-                    }
-                }
-            ],
-        }
 
         # Set up excel instance with mocked dependencies
         mock_args = MagicMock()
         excel_instance = excel(mock_args)
-        excel_instance.wgs_data = mock_wgs_data
+        excel_instance.wgs_data = self.wgs_data
         excel_instance.proband = "proband_id"
         excel_instance.proband_sex = "MALE"
         excel_instance.mane = []
