@@ -7,6 +7,7 @@ import obonet
 import sys
 import json
 import warnings
+import excel_styles
 from openpyxl import Workbook
 from make_workbook import excel
 import get_variant_info as var_info
@@ -101,17 +102,104 @@ class TestWorkbook():
             excel.add_epic_data(self)
 
     def test_alternative_homozygous_notation_becomes_homozygous(self):
-        '''
-        Test that 'alternative_homozgyous' notation in zygosity is converted to
+        """
+        Test that 'alternate_homozygous' notation in zygosity is converted to
         'homozygous' in the workbook
-        '''
-        df = pd.DataFrame([{"Zygosity": "alternate_homozygous"}])
-        print(df)
-        df.loc[df["Zygosity"] == "alternate_homozygous", "Zygosity"] = "homozygous"
-        print("DataFrame after conversion:", df)
+        """
+        # Mock GEL-tiered SNV with all fields needed
+        mock_wgs_data = {
+            "family_id": "FAM123",
+            "interpretation_request_data": {
+                "json_request": {
+                    "pedigree": {
+                        "members": [
+                            {
+                                "participantId": "proband_id",
+                                "sex": "MALE",
+                                "isProband": True,
+                            }
+                        ]
+                    }
+                }
+            },
+            "interpretedGenomes": [
+                {
+                    "interpretedGenomeData": {
+                        "interpretationService": "genomics_england_tiering",
+                        "variants": [
+                            {
+                                "variantCoordinates": {
+                                    "chromosome": "1",
+                                    "position": 12345,
+                                    "reference": "A",
+                                    "alternate": "G",
+                                },
+                                "variantCalls": [
+                                    {
+                                        "participantId": "proband_id",
+                                        "zygosity": "alternate_homozygous",
+                                        "depthReference": 20,
+                                        "depthAlternate": 29,
+                                    }
+                                ],
+                                "variantAttributes": {
+                                    "alleleFrequencies": [],
+                                    "additionalTextualVariantAnnotations": {
+                                        "hgvs": ["TEST:c.123A>G"]
+                                    },
+                                    "cdnaChanges": ["TEST:c.123A>G"],
+                                    "proteinChanges": ["TEST:p.Arg123Gly"],
+                                },
+                                "reportEvents": [
+                                    {
+                                        "tier": "TIER1",
+                                        "genomicEntities": [
+                                            {"geneSymbol": "TESTGENE", "type": "gene"}
+                                        ],
+                                        "penetrance": "incomplete",
+                                        "modeOfInheritance": "None"
+                                    }
+                                ],
+                            }
+                        ],
+                        "shortTandemRepeats": [],
+                        "structuralVariants": []
+                    }
+                }
+            ],
+        }
 
-        assert "homozygous" in df["Zygosity"].values
-        assert "alternative_homozygous" not in df["Zygosity"].values
+        # Set up excel instance with mocked dependencies
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
+        excel_instance.wgs_data = mock_wgs_data
+        excel_instance.proband = "proband_id"
+        excel_instance.proband_sex = "MALE"
+        excel_instance.mane = []
+        excel_instance.refseq_tsv = []
+        excel_instance.var_df = pd.DataFrame()
+
+        # Call helper fnctions that performs normalisation
+        excel_instance.get_interpreted_genome_format()
+        excel_instance.index_interpretation_services()
+
+        # Patch whats needed for the excel_instance
+        with patch.object(pd.DataFrame, "to_excel", return_value=None), \
+            patch.object(excel_instance, "open_files"), \
+            patch.object(excel_instance, "writer", create=True), \
+            patch.object(excel_instance, "workbook", create=True), \
+            patch("excel_styles.DropDown.drop_down"), \
+            patch("excel_styles.ExcelStyles.borders"):
+
+            excel_instance.writer = MagicMock()
+            excel_instance.workbook = MagicMock()
+
+            # Call function that changes"alternate_homozygous" to "homozygous"
+            excel_instance.create_gel_tiering_variant_page()
+
+            # Check alternate_homozygous changed to homozygous in mock workbook
+            assert "homozygous" in excel_instance.var_df["Zygosity"].values
+            assert "alternate_homozygous" not in excel_instance.var_df["Zygosity"].values
 
     def test_write_snv_report_colouring(self):
         '''

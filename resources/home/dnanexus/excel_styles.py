@@ -3,7 +3,6 @@ from openpyxl.styles import Alignment, Border, DEFAULT_FONT, Font, Side
 from openpyxl.styles.fills import PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl import load_workbook
-from openpyxl.styles import Border, Side
 from copy import copy
 
 # openpyxl style settings
