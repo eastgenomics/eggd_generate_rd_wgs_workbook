@@ -13,6 +13,7 @@ from os import path
 from pathlib import Path
 import re
 import dxpy
+from openpyxl.styles import PatternFill
 
 from excel_styles import ExcelStyles, DropDown
 import get_variant_info as var_info
@@ -637,6 +638,8 @@ class excel():
                         self.father,
                         self.proband_sex
                         )
+                    if var_dict.get("Zygosity") == "alternate_homozygous":
+                        var_dict["Zygosity"] = "homozygous"
                     c_dot, p_dot = var_info.get_hgvs_gel(
                         snv,
                         self.mane,
@@ -1012,6 +1015,10 @@ class excel():
             cnv[f"G{row}"].alignment = Alignment(
                 wrapText=True, vertical="center", horizontal="center"
             )
+        # Implement colour labelling
+        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        for row in range(1, cnv.max_row + 1):
+            cnv[f"H{row}"].fill = yellow_fill
 
     def write_snv_reporting_template(self, report_sheet_num) -> None:
         """
@@ -1207,3 +1214,13 @@ class excel():
             ]
         }
         ExcelStyles.borders(self, row_ranges, report)
+
+        # Implement colour labelling
+        # Adding yellow to Column M (checker comments column)
+        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        for row in range(1, report.max_row + 1):
+            report[f"M{row}"].fill = yellow_fill
+
+        # Adding yellow to G2 and G3 (Transcripts/IGV checked column)
+        report["G2"].fill = yellow_fill
+        report["G3"].fill = yellow_fill

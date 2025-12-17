@@ -6,6 +6,9 @@ import os
 import obonet
 import sys
 import json
+import warnings
+import excel_styles
+from openpyxl import Workbook
 from make_workbook import excel
 import get_variant_info as var_info
 from start_process import SortArgs
@@ -25,7 +28,7 @@ class TestWorkbook():
         }
     }
     wgs_data = {
-        "family_id": "r12345",
+        "family_id": ["r12345"],
         "interpretation_request_data": {
             "json_request": {
                 "pedigree": {
@@ -34,30 +37,81 @@ class TestWorkbook():
                             "hpoTermList": [
                                 {"hpoBuildNumber": "vXXXXXX"}
                             ]
-                        }
-                    ],
-                    'diseasePenetrances': [
-                        {
-                            'penetrance': 'complete',
-                            'specificDisease': 'Congenital malformation'
                         },
                         {
-                            'penetrance': 'incomplete',
-                            'specificDisease': 'OtherDisease'
+                            "participantId": "proband_id",
+                            "sex": "MALE",
+                            "isProband": True
                         }
                     ],
-                    'analysisPanels': [
+                    "diseasePenetrances": [
                         {
-                            'panelId': "486",
-                            'panelName': "286",
-                            'specificDisease': 'Congenital malformation',
-                            'panelVersion': "2.2"
+                            "penetrance": "complete",
+                            "specificDisease": "Congenital malformation"
+                        },
+                        {
+                            "penetrance": "incomplete",
+                            "specificDisease": "OtherDisease"
+                        }
+                    ],
+                    "analysisPanels": [
+                        {
+                            "panelId": "486",
+                            "panelName": "286",
+                            "specificDisease": "Congenital malformation",
+                            "panelVersion": "2.2"
                         }
                     ]
                 }
             }
-        }
+        },
+        "interpretedGenomes": [
+            {
+                "interpretedGenomeData": {
+                    "interpretationService": "genomics_england_tiering",
+                    "variants": [
+                        {
+                            "variantCoordinates": {
+                                "chromosome": "1",
+                                "position": 12345,
+                                "reference": "A",
+                                "alternate": "G"
+                            },
+                            "variantCalls": [
+                                {
+                                    "participantId": "proband_id",
+                                    "zygosity": "alternate_homozygous",
+                                    "depthReference": 20,
+                                    "depthAlternate": 29
+                                }
+                            ],
+                            "variantAttributes": {
+                                "alleleFrequencies": [],
+                                "additionalTextualVariantAnnotations": {
+                                    "hgvs": ["TEST:c.123A>G"]
+                                },
+                                "cdnaChanges": ["TEST:c.123A>G"],
+                                "proteinChanges": ["TEST:p.Arg123Gly"]
+                            },
+                            "reportEvents": [
+                                {
+                                    "tier": "TIER1",
+                                    "genomicEntities": [
+                                        {"geneSymbol": "TESTGENE", "type": "gene"}
+                                    ],
+                                    "penetrance": "incomplete",
+                                    "modeOfInheritance": "None"
+                                }
+                            ]
+                        }
+                    ],
+                    "shortTandemRepeats": [],
+                    "structuralVariants": []
+                }
+            }
+        ]
     }
+
 
     def test_get_panels_extracts_data_from_input_panel_json(self):
         '''
@@ -98,7 +152,86 @@ class TestWorkbook():
         with pytest.raises(ValueError):
             excel.add_epic_data(self)
 
+    def test_alternative_homozygous_notation_becomes_homozygous(self):
+        """
+        Test that 'alternate_homozygous' notation in zygosity is converted to
+        'homozygous' in the workbook
+        """
 
+        # Set up excel instance with mocked dependencies
+        mock_args = MagicMock()
+        excel_instance = excel(mock_args)
+        excel_instance.wgs_data = self.wgs_data
+        excel_instance.proband = "proband_id"
+        excel_instance.proband_sex = "MALE"
+        excel_instance.mane = []
+        excel_instance.refseq_tsv = []
+        excel_instance.var_df = pd.DataFrame()
+
+        # Call helper fnctions that performs normalisation
+        excel_instance.get_interpreted_genome_format()
+        excel_instance.index_interpretation_services()
+
+        # Patch whats needed for the excel_instance
+        with patch.object(pd.DataFrame, "to_excel", return_value=None), \
+            patch.object(excel_instance, "open_files"), \
+            patch.object(excel_instance, "writer", create=True), \
+            patch.object(excel_instance, "workbook", create=True), \
+            patch("excel_styles.DropDown.drop_down"), \
+            patch("excel_styles.ExcelStyles.borders"):
+
+            excel_instance.writer = MagicMock()
+            excel_instance.workbook = MagicMock()
+
+            # Call function that changes"alternate_homozygous" to "homozygous"
+            excel_instance.create_gel_tiering_variant_page()
+
+            # Check alternate_homozygous changed to homozygous in mock workbook
+            assert "homozygous" in excel_instance.var_df["Zygosity"].values
+            assert "alternate_homozygous" not in excel_instance.var_df["Zygosity"].values
+
+    def test_write_snv_report_colouring(self):
+        '''
+        Test that the function to add SNV reporting colouring to the workbook
+        runs without error.
+        '''
+        wb = Workbook()
+        wb.remove(wb.active)
+        writer = excel(None)
+        writer.workbook = wb
+
+        writer.write_snv_reporting_template(1)
+        sheet = wb["snv_interpret_1"]
+
+        # Check G2 and G3 are yellow
+        assert sheet["G2"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+        assert sheet["G3"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+
+        # Check all of column M is yellow
+        assert all(
+            sheet[f"M{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+            for row in range(1, sheet.max_row + 1)
+        )
+
+    def test_cnv_report_colouring(self):
+        '''
+        Test that the function to add CNV reporting colouring to the workbook
+        runs without error.
+        '''
+        wb = Workbook()
+        wb.remove(wb.active)
+        writer = excel(None)
+        writer.workbook = wb
+
+        writer.write_cnv_reporting_template(1)
+        sheet = wb["cnv_interpret_1"]
+
+
+        # Check all of column H is yellow
+        assert all(
+            sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
+            for row in range(1, sheet.max_row + 1)
+        )
 class TestInterpretationService():
     '''
     Test that the function to find interpretation service works as expected
