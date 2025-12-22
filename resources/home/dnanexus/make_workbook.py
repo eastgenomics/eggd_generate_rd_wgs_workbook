@@ -837,6 +837,15 @@ class excel():
                 indicator=True,
                 suffixes=[None, "_y"]
             )
+            # Exclude variants where both Exomiser and GEL tiering are NULL
+            # and keep variants where only one of the two is NULL
+            if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
+                merge_df = merge_df[
+                    ~(
+                        (merge_df['Tier'].isna()) &
+                        (merge_df['Tier_y'].isna())
+                    )
+                ]
             # Keep left only == keep only those that are in exomiser df and
             # not in tiered df
             merge_df = merge_df[merge_df['_merge'] == 'left_only']
