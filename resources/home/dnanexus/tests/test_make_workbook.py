@@ -409,7 +409,7 @@ class TestWorkbook():
             sheet_name = kwargs.get("sheet_name") or (args[2] if len(args) > 2 else None)
             if sheet_name == "Extended_analysis":
                 captured_df = df.copy()
-                print("\n#### captured_df ####")
+                print("\n captured_df ")
                 print(captured_df)
 
         with patch.object(var_info, "get_snv_info", side_effect=mock_get_snv_info), \
