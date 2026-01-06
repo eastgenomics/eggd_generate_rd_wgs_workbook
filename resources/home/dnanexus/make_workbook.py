@@ -747,9 +747,7 @@ class excel():
             for event in snv["reportEvents"]:
                 # Filter out mitochondrial + untiered as these are likely
                 # artifacts
-                if (snv['variantCoordinates']['chromosome'] == 'MT' and
-                    event['tier'] is None
-                    ):
+                if event['tier'] is None:
                     continue
                 else:
                     ev_to_look_at.append(event)
@@ -837,23 +835,42 @@ class excel():
                 indicator=True,
                 suffixes=[None, "_y"]
             )
-            # Exclude variants where both Exomiser and GEL tiering are NULL
-            # and keep variants where only one of the two is NULL
+            # Remove duplicate columns created by merge
+            merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
+
+            merge_df = merge_df[merge_df['_merge'] == 'left_only']
+            # Reset index after filtering
+            merge_df = merge_df.reset_index(drop=True)
+            # Drop merge column
+            merge_df = merge_df.drop(columns=['_merge'])
+            # Reset index again
+            merge_df = merge_df.reset_index(drop=True)
+
+            # Now apply the Tier/Tier_y filtering
             if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
+
+                # Collapse duplicate Tier_y columns if merge created more than one
+                if isinstance(merge_df["Tier_y"], pd.DataFrame):
+                    merge_df["Tier_y"] = merge_df["Tier_y"].iloc[:, 0]
+
+                # Normalize None to pd.NA to make sure proper isna() filtering is done
+                merge_df["Tier"] = merge_df["Tier"].replace({None: pd.NA})
+                merge_df["Tier_y"] = merge_df["Tier_y"].replace({None: pd.NA})
+
+                # Filter out MT variants where Tier and Tier_y are missing
                 merge_df = merge_df[
                     ~(
-                        (merge_df['Tier'].isna()) &
-                        (merge_df['Tier_y'].isna())
+                        (merge_df['Chr'] == 'MT') &
+                        merge_df['Tier'].isna() &
+                        merge_df['Tier_y'].isna()
                     )
                 ]
+
             # Keep left only == keep only those that are in exomiser df and
             # not in tiered df
-            merge_df = merge_df[merge_df['_merge'] == 'left_only']
             # Clean up df by dropping merge column and columns ending _y
-            merge_df = merge_df.drop(columns=['_merge'])
-            ex_df = merge_df[merge_df.columns.drop(
-                list(merge_df.filter(regex='.*\_y'))
-            )]
+            cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
+            ex_df = merge_df.drop(columns=cols_to_drop)
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
