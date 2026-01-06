@@ -335,12 +335,12 @@ class TestWorkbook():
         excel_instance.ex_index = 1
         excel_instance.gel_index = 0
 
-        # Test var_df doesn't contain MT variants
+        # Added test var_df to check MT variant filtering
         excel_instance.var_df = pd.DataFrame([
             {"Chr": "1", "Pos": 99999, "Ref": "A", "Alt": "G"},
         ])
 
-        # Create valid Exomiser event as helper
+        # Create valid Exomiser event as helper function
         def make_event(tier):
             return {
                 "tier": tier,
@@ -370,7 +370,7 @@ class TestWorkbook():
                                 "exomiser": None,
                                 "reportEvents": [make_event(None)],
                             },
-                            # Should be included (TIER3 present in gel_tiering)
+                            # Should be included (TIER3 in gel_tiering)
                             {
                                 "variantCoordinates": {
                                     "chromosome": "MT",
@@ -382,7 +382,7 @@ class TestWorkbook():
                                 "exomiser": None,
                                 "reportEvents": [make_event("TIER3")],
                             },
-                            # Should be included (TIER3 present in exomiser)
+                            # Should be included (TIER3 in exomiser)
                             {
                                 "variantCoordinates": {
                                     "chromosome": "MT",
@@ -424,7 +424,7 @@ class TestWorkbook():
         # Extract MT positions from df to check MT variants are present
         mt_positions = {int(pos) for chr_, pos in zip(df["Chr"], df["Pos"]) if chr_ == "MT"}
 
-        # Check only expected MT positions are present
+        # Check only expected MT positions are present in df
         assert 12345 not in mt_positions
         assert 67890 in mt_positions
         assert 11121 in mt_positions
