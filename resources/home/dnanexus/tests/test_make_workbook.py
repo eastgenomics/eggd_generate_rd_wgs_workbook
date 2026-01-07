@@ -14,6 +14,7 @@ import get_variant_info as var_info
 from start_process import SortArgs
 from unittest import mock
 from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 
 
 class TestWorkbook():
@@ -65,6 +66,7 @@ class TestWorkbook():
                 }
             }
         },
+
         "interpretedGenomes": [
             {
                 "interpretedGenomeData": {
@@ -100,7 +102,8 @@ class TestWorkbook():
                                         {"geneSymbol": "TESTGENE", "type": "gene"}
                                     ],
                                     "penetrance": "incomplete",
-                                    "modeOfInheritance": "None"
+                                    "modeOfInheritance": "None",
+                                    "segregationPattern": "not_deNovo"
                                 }
                             ]
                         }
@@ -108,10 +111,67 @@ class TestWorkbook():
                     "shortTandemRepeats": [],
                     "structuralVariants": []
                 }
+            },
+            {
+                "interpretedGenomeData": {
+                    "interpretationService": "exomiser",
+                    "variants": [
+                        {
+                            "variantCoordinates": {
+                                "chromosome": "MT",
+                                "position": 12345,
+                                "reference": "A",
+                                "alternate": "G"
+                            },
+                            "reportEvents": [
+                                {
+                                    "tier": None,
+                                    "score": 0.8,
+                                    "vendorSpecificScores": {"rank": 1}
+                                }
+                            ],
+                            "exomiser": None,
+                            "gel_tiering": None
+                        },
+                        {
+                            "variantCoordinates": {
+                                "chromosome": "MT",
+                                "position": 67890,
+                                "reference": "C",
+                                "alternate": "T"
+                            },
+                            "reportEvents": [
+                                {
+                                    "tier": "TIER1",
+                                    "score": 0.9,
+                                    "vendorSpecificScores": {"rank": 1}
+                                }
+                            ],
+                            "exomiser": None,
+                            "gel_tiering": "TIER1"
+                        },
+                        {
+                            "variantCoordinates": {
+                                "chromosome": "MT",
+                                "position": 11121,
+                                "reference": "G",
+                                "alternate": "A"
+                            },
+                            "reportEvents": [
+                                {
+                                    "tier": "TIER2",
+                                    "score": 0.85,
+                                    "vendorSpecificScores": {"rank": 1}
+                                }
+                            ],
+                            "exomiser": "TIER2",
+                            "gel_tiering": None
+                        }
+                    ]
+                }
             }
         ]
     }
-
 
     def test_get_panels_extracts_data_from_input_panel_json(self):
         '''
@@ -232,6 +292,143 @@ class TestWorkbook():
             sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
             for row in range(1, sheet.max_row + 1)
         )
+
+    def test_mt_variants_exclusion(self):
+        """
+        Ensure MT variants where both Exomiser and GEL tiering are null
+        are excluded, and variants where at least one tier is present are kept.
+        """
+
+        # Mock get_snv_info to run create_additional_analysis_page function
+        def mock_get_snv_info(snv, *args, **kwargs):
+            vc = snv["variantCoordinates"]
+            return {
+                "Chr": vc["chromosome"],
+                "Pos": vc["position"],
+                "Ref": vc["reference"],
+                "Alt": vc["alternate"],
+                "Tier": snv.get("gel_tiering"),
+                "Tier_y": snv.get("exomiser"),
+                "Gene": "TESTGENE",
+                "Priority": "Exomiser Rank 1",
+                "HGVSc": "c.123A>G",
+                "HGVSp": "p.Arg123Gly",
+            }
+
+        # Create mock excel instance
+        class MockSheet:
+            def __init__(self):
+                self.column_dimensions = {
+                    "C": SimpleNamespace(width=None),
+                    "D": SimpleNamespace(width=None)
+                }
+            def __setitem__(self, key, value):
+                pass
+
+        excel_instance = excel({})
+        excel_instance.workbook = {
+            "Extended_analysis": MockSheet(),
+            "Summary": MockSheet()
+        }
+        excel_instance.genome_format = "interpretedGenomes"
+        excel_instance.genome_data_format = "interpretedGenomeData"
+        excel_instance.ex_index = 1
+        excel_instance.gel_index = 0
+
+        # Added test var_df to check MT variant filtering
+        excel_instance.var_df = pd.DataFrame([
+            {"Chr": "1", "Pos": 99999, "Ref": "A", "Alt": "G"},
+        ])
+
+        # Create valid Exomiser event as helper function
+        def make_event(tier):
+            return {
+                "tier": tier,
+                "score": 0.90,
+                "vendorSpecificScores": {"rank": 1},
+                "segregationPattern": "unknown",
+                "geneSymbol": "TESTGENE",
+                "consequenceTypes": [],
+                "variantFunctionalScore": 1.0,
+            }
+
+        # Create wgs_data with MT variants for testing
+        excel_instance.wgs_data = {
+            "interpretedGenomes": {
+                1: {
+                    "interpretedGenomeData": {
+                        "variants": [
+                            # Should be excluded (both tiers null)
+                            {
+                                "variantCoordinates": {
+                                    "chromosome": "MT",
+                                    "position": 12345,
+                                    "reference": "A",
+                                    "alternate": "G",
+                                },
+                                "gel_tiering": None,
+                                "exomiser": None,
+                                "reportEvents": [make_event(None)],
+                            },
+                            # Should be included (TIER3 in gel_tiering)
+                            {
+                                "variantCoordinates": {
+                                    "chromosome": "MT",
+                                    "position": 67890,
+                                    "reference": "C",
+                                    "alternate": "T",
+                                },
+                                "gel_tiering": "TIER3",
+                                "exomiser": None,
+                                "reportEvents": [make_event("TIER3")],
+                            },
+                            # Should be included (TIER3 in exomiser)
+                            {
+                                "variantCoordinates": {
+                                    "chromosome": "MT",
+                                    "position": 11121,
+                                    "reference": "G",
+                                    "alternate": "A",
+                                },
+                                "gel_tiering": None,
+                                "exomiser": "TIER3",
+                                "reportEvents": [make_event("TIER3")],
+                            },
+                        ]
+                    }
+                },
+                0: {"interpretedGenomeData": {"variants": []}},
+            }
+        }
+
+        captured_df = None
+
+        # Capture only the Extended_analysis sheet
+        def capture_df(df, *args, **kwargs):
+            nonlocal captured_df
+            sheet_name = kwargs.get("sheet_name") or (args[2] if len(args) > 2 else None)
+            if sheet_name == "Extended_analysis":
+                captured_df = df.copy()
+                print("\n captured_df ")
+                print(captured_df)
+
+        with patch.object(var_info, "get_snv_info", side_effect=mock_get_snv_info), \
+            patch.object(var_info, "get_hgvs_exomiser", lambda snv, mane, refseq: ("c.123A>G", "p.Arg123Gly")), \
+            patch("make_workbook.ExcelStyles.resize_variant_columns", return_value=None), \
+            patch.object(pd.DataFrame, "to_excel", autospec=True, side_effect=capture_df):
+            excel_instance.create_additional_analysis_page()
+        # Check that df is captured and not empty
+        assert captured_df is not None, "No df was created for Extended_analysis sheet"
+
+        df = captured_df
+        # Extract MT positions from df to check MT variants are present
+        mt_positions = {int(pos) for chr_, pos in zip(df["Chr"], df["Pos"]) if chr_ == "MT"}
+
+        # Check only expected MT positions are present in df
+        assert 12345 not in mt_positions
+        assert 67890 in mt_positions
+        assert 11121 in mt_positions
+
 class TestInterpretationService():
     '''
     Test that the function to find interpretation service works as expected
