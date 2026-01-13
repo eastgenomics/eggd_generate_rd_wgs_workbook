@@ -232,10 +232,11 @@ class excel():
 
     def get_summary_content(self,data):
         return {
-            (1, 9): str(data["interpretation_request_data"]['json_request'][
-                            next(k for k in data["interpretation_request_data"]['json_request'] if re.fullmatch("interpretation_flags", k, re.IGNORECASE))
-
-                            ]
+            (1, 9): str(data["interpretation_request_data"]['json_request'].get(
+                            next((k for k in data["interpretation_request_data"]['json_request']
+                                 if re.fullmatch("interpretation_flags", k, re.IGNORECASE)),
+                            None)
+                            )
                         ),
                     (1, 2): data["family_id"]}
 
