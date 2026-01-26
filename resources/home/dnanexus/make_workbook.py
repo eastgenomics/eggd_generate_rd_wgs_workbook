@@ -765,7 +765,25 @@ class excel():
                 self.ex_index
             ][self.genome_data_format]["variants"]:
             ev_to_look_at = []
+
+            # Get chr, pos, ref, alt for use in MT GEL tier lookup
+            chr_ = snv.get("chromosome") or snv.get("Chr")
+            pos = snv.get("position") or snv.get("Pos")
+            ref = snv.get("reference") or snv.get("Ref")
+            alt = snv.get("alternate") or snv.get("Alt")
+
+            is_mt = str(chr_) == "MT"
+
             for event in snv["reportEvents"]:
+                # NEW: MT variants must use GEL tier, not Exomiser tier
+                if is_mt:
+                    gel_tier = get_mt_gel_tier(chr_, pos, ref, alt)
+
+                    # Keep only MT variants with GEL tier = 3
+                    if gel_tier is not None and gel_tier >= 3:
+                        ev_to_look_at.append(event)
+
+                    continue
                 # Filter out mitochondrial + untiered as these are likely
                 # artifacts
                 if event['tier'] is None:
@@ -832,7 +850,10 @@ class excel():
                         self.father,
                         self.proband_sex
                     )
-                    var_dict["Priority"] = "De novo"
+                    if "Priority" in var_dict:
+                        var_dict["Priority"] += "; De novo"
+                    else:
+                        var_dict["Priority"] = "De novo"
                     var_dict["Inheritance"] = "De novo"
                     var_dict["HGVSc"], var_dict["HGVSp"] = (
                         var_info.get_hgvs_gel(
