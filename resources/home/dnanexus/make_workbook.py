@@ -737,6 +737,26 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         '''
+        def get_mt_gel_tier(chr_, pos, ref, alt):
+            """
+            Helper function to look up the highest GEL tier for a mitochondrial variant.
+            Returns integer tier or None if no tiered GEL event exists.
+            """
+            gel_variants = self.wgs_data[self.genome_format][self.gel_index][self.genome_data_format]["variants"]
+
+            tiers = []
+            for gel_snv in gel_variants:
+                if (str(gel_snv.get("chromosome")) == str(chr_) and
+                    str(gel_snv.get("position")) == str(pos) and
+                    str(gel_snv.get("reference")) == str(ref) and
+                    str(gel_snv.get("alternate")) == str(alt)):
+
+                    for ge in gel_snv["reportEvents"]:
+                        if ge.get("tier") is not None:
+                            tiers.append(ge["tier"])
+
+            return min(tiers) if tiers else None
+
         variant_list = []
         ranked = []
         # Look through Exomiser SNVs and return those that are ranked
