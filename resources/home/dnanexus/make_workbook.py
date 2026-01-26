@@ -920,8 +920,8 @@ class excel():
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
-                denovo_df = ex_df[ex_df['Priority'].str.lower() == 'de novo'].copy()
-                exomiser_df = ex_df[ex_df['Priority'].str.lower() != "de novo"].copy()
+                denovo_df = ex_df[ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
+                exomiser_df = ex_df[~ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
 
                 if not exomiser_df.empty:
                     exomiser_df = var_info.get_top_3_ranked(exomiser_df)
