@@ -775,7 +775,7 @@ class excel():
             is_mt = str(chr_) == "MT"
 
             for event in snv["reportEvents"]:
-                # NEW: MT variants must use GEL tier, not Exomiser tier
+                #  MT variants must use GEL tier, not Exomiser tier
                 if is_mt:
                     gel_tier = get_mt_gel_tier(chr_, pos, ref, alt)
 
@@ -784,12 +784,8 @@ class excel():
                         ev_to_look_at.append(event)
 
                     continue
-                # Filter out mitochondrial + untiered as these are likely
-                # artifacts
-                if event['tier'] is None:
-                    continue
-                else:
-                    ev_to_look_at.append(event)
+                # Keep all autosomal events
+                ev_to_look_at.append(event)
 
             # if we have a list of non MT/untiered events, get highest
             # ranked event from this list + set it as the only report event
@@ -801,11 +797,15 @@ class excel():
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
+        print("Ranked variants:", len(ranked))
+
         # We only want Exomiser variants with a score >= 0.75, so we need to
         # filter the list to keep only these
         ranked_and_above_threshold = [
             x for x in ranked if x['reportEvents']['score'] >= 0.75
         ]
+
+        print("Above threshold:", len(ranked_and_above_threshold))
 
         for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
@@ -865,6 +865,9 @@ class excel():
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
+
+        print("ex_df before merge:", len(ex_df))
+
         if not ex_df.empty and not self.var_df.empty:
             # Convert all df columns to object type to allow merging without
             # conflicts
@@ -913,6 +916,7 @@ class excel():
             # Clean up df by dropping merge column and columns ending _y
             cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
             ex_df = merge_df.drop(columns=cols_to_drop)
+            print("ex_df after merge:", len(ex_df))
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
