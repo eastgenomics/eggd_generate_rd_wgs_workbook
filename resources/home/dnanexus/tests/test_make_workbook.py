@@ -313,6 +313,9 @@ class TestWorkbook():
                 "Priority": "Exomiser Rank 1",
                 "HGVSc": "c.123A>G",
                 "HGVSp": "p.Arg123Gly",
+                "Consequence": "missense_variant",
+                "Zygosity": "het",
+                "Sample": "TESTSAMPLE",
             }
 
         # Create mock excel instance
@@ -337,7 +340,7 @@ class TestWorkbook():
 
         # Added test var_df to check MT variant filtering
         excel_instance.var_df = pd.DataFrame([
-            {"Chr": "1", "Pos": 99999, "Ref": "A", "Alt": "G"},
+            {"Chr": "MT", "Pos": 12345, "Ref": "A", "Alt": "G"}
         ])
 
         # Create valid Exomiser event as helper function
@@ -355,22 +358,9 @@ class TestWorkbook():
         # Create wgs_data with MT variants for testing
         excel_instance.wgs_data = {
             "interpretedGenomes": {
-                1: {
+                0: {    # Create GEL variants
                     "interpretedGenomeData": {
                         "variants": [
-                            # Should be excluded (both tiers null)
-                            {
-                                "variantCoordinates": {
-                                    "chromosome": "MT",
-                                    "position": 12345,
-                                    "reference": "A",
-                                    "alternate": "G",
-                                },
-                                "gel_tiering": None,
-                                "exomiser": None,
-                                "reportEvents": [make_event(None)],
-                            },
-                            # Should be included (TIER3 in gel_tiering)
                             {
                                 "variantCoordinates": {
                                     "chromosome": "MT",
@@ -382,8 +372,43 @@ class TestWorkbook():
                                 "exomiser": None,
                                 "reportEvents": [make_event("TIER3")],
                             },
-                            # Should be included (TIER3 in exomiser)
                             {
+                                "variantCoordinates": {
+                                    "chromosome": "MT",
+                                    "position": 11121,
+                                    "reference": "G",
+                                    "alternate": "A",
+                                },
+                                "gel_tiering": "TIER3",
+                                "exomiser": None,
+                                "reportEvents": [make_event("TIER3")],
+                            }
+                        ]
+                    }
+                },
+                1: {
+                    "interpretedGenomeData": {
+                        "variants": [
+                            {
+                                "chromosome": "MT",
+                                "position": 12345,
+                                "reference": "A",
+                                "alternate": "G",
+                                "variantCoordinates": {
+                                    "chromosome": "MT",
+                                    "position": 12345,
+                                    "reference": "A",
+                                    "alternate": "G",
+                                },
+                                "gel_tiering": None,
+                                "exomiser": None,
+                                "reportEvents": [make_event(None)],
+                            },
+                            {
+                                "chromosome": "MT",
+                                "position": 11121,
+                                "reference": "G",
+                                "alternate": "A",
                                 "variantCoordinates": {
                                     "chromosome": "MT",
                                     "position": 11121,
@@ -393,11 +418,10 @@ class TestWorkbook():
                                 "gel_tiering": None,
                                 "exomiser": "TIER3",
                                 "reportEvents": [make_event("TIER3")],
-                            },
+                            }
                         ]
                     }
-                },
-                0: {"interpretedGenomeData": {"variants": []}},
+                }
             }
         }
 
@@ -425,8 +449,11 @@ class TestWorkbook():
         mt_positions = {int(pos) for chr_, pos in zip(df["Chr"], df["Pos"]) if chr_ == "MT"}
 
         # Check only expected MT positions are present in df
+        # Has no GEL or exomiser tiering
         assert 12345 not in mt_positions
-        assert 67890 in mt_positions
+        # Has no Exomiser tiering
+        assert 67890 not in mt_positions
+        # Has Exomiser and GEL tiering
         assert 11121 in mt_positions
 
 class TestInterpretationService():
