@@ -741,21 +741,35 @@ class excel():
             """
             Helper function to look up the highest GEL tier for a mitochondrial variant.
             Returns integer tier or None if no tiered GEL event exists.
+            Inputs:
+                chr_ (str): Chromosome of the variant
+                pos (str): Position of the variant
+                ref (str): Reference allele of the variant
+                alt (str): Alternate allele of the variant
+            Outputs:
+                tier (int or None): Highest clinical GEL tier for the variant, or None if not found
             """
             gel_variants = self.wgs_data[self.genome_format][self.gel_index][self.genome_data_format]["variants"]
 
-            tiers = []
+            tier_nums = []
             for gel_snv in gel_variants:
-                if (str(gel_snv.get("chromosome")) == str(chr_) and
-                    str(gel_snv.get("position")) == str(pos) and
-                    str(gel_snv.get("reference")) == str(ref) and
-                    str(gel_snv.get("alternate")) == str(alt)):
+                coords = gel_snv.get("variantCoordinates", {})
+                if (
+                    str(coords.get("chromosome")) == str(chr_) and
+                    str(coords.get("position")) == str(pos) and
+                    str(coords.get("reference")) == str(ref) and
+                    str(coords.get("alternate")) == str(alt)
+                ):
+                    for event in gel_snv["reportEvents"]:
+                        tier_str = event.get("tier")
+                        if tier_str is not None:
+                            # Extract numeric tier (e.g. "TIER3" -> 3)
+                            match = re.search(r'\d+', tier_str)
+                            if match:
+                                tier_nums.append(int(match.group()))
 
-                    for ge in gel_snv["reportEvents"]:
-                        if ge.get("tier") is not None:
-                            tiers.append(ge["tier"])
-
-            return min(tiers) if tiers else None
+                    return min(tier_nums) if tier_nums else None
+            return None
 
         variant_list = []
         ranked = []
@@ -772,6 +786,10 @@ class excel():
             ref = snv.get("reference") or snv.get("Ref")
             alt = snv.get("alternate") or snv.get("Alt")
 
+            # If MT GEL variant not found, skip to next variant
+            if None in [chr_, pos, ref, alt]:
+                continue
+
             is_mt = str(chr_) == "MT"
 
             for event in snv["reportEvents"]:
@@ -780,12 +798,12 @@ class excel():
                     gel_tier = get_mt_gel_tier(chr_, pos, ref, alt)
 
                     # Keep only MT variants with GEL tier = 3
-                    if gel_tier is not None and gel_tier >= 3:
+                    if gel_tier is not None:
                         ev_to_look_at.append(event)
 
-                    continue
                 # Keep all autosomal events
-                ev_to_look_at.append(event)
+                else:
+                    ev_to_look_at.append(event)
 
             # if we have a list of non MT/untiered events, get highest
             # ranked event from this list + set it as the only report event
@@ -797,15 +815,11 @@ class excel():
                 snv['reportEvents'] = top_event
                 ranked.append(snv)
 
-        print("Ranked variants:", len(ranked))
-
         # We only want Exomiser variants with a score >= 0.75, so we need to
         # filter the list to keep only these
         ranked_and_above_threshold = [
             x for x in ranked if x['reportEvents']['score'] >= 0.75
         ]
-
-        print("Above threshold:", len(ranked_and_above_threshold))
 
         for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
@@ -850,7 +864,7 @@ class excel():
                         self.father,
                         self.proband_sex
                     )
-                    if "Priority" in var_dict:
+                    if var_dict.get("Priority"):
                         var_dict["Priority"] += "; De novo"
                     else:
                         var_dict["Priority"] = "De novo"
@@ -865,8 +879,6 @@ class excel():
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
-
-        print("ex_df before merge:", len(ex_df))
 
         if not ex_df.empty and not self.var_df.empty:
             # Convert all df columns to object type to allow merging without
@@ -916,7 +928,6 @@ class excel():
             # Clean up df by dropping merge column and columns ending _y
             cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
             ex_df = merge_df.drop(columns=cols_to_drop)
-            print("ex_df after merge:", len(ex_df))
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
