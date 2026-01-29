@@ -790,7 +790,7 @@ class excel():
 
             # If MT GEL variant not found, skip to next variant
             if None in [chr_, pos, ref, alt]:
-                raise ValueError(f"Exomiser SNV missing required coordinates: {snv}")
+                raise ValueError(f"Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)")
 
             is_mt = str(chr_) == "MT"
 
