@@ -449,11 +449,19 @@ class TestWorkbook():
         mt_positions = {int(pos) for chr_, pos in zip(df["Chr"], df["Pos"]) if chr_ == "MT"}
 
         # Check only expected MT positions are present in df
-        # Has no GEL or exomiser tiering
+        # 12345 will be excluded.
+        # Has exomiser dataset but no GEL and exomiser tiering
+        # Tier and Tier_y are both null
         assert 12345 not in mt_positions
-        # Has no Exomiser tiering
+
+        # 67890 will be excluded.
+        # Has GEL tiering but no matching Exomiser tiering dataset
+        # GEL only variants are don't go through exomiser pipeline
         assert 67890 not in mt_positions
-        # Has Exomiser and GEL tiering
+
+        # 11121 will be included
+        # Has Exomiser and matching GEL tiering dataset
+        # Passes MT filtering with at least one tier present are kept
         assert 11121 in mt_positions
 
 class TestInterpretationService():

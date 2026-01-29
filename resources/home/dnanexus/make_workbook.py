@@ -781,14 +781,16 @@ class excel():
             ev_to_look_at = []
 
             # Get chr, pos, ref, alt for use in MT GEL tier lookup
-            chr_ = snv.get("chromosome") or snv.get("Chr")
-            pos = snv.get("position") or snv.get("Pos")
-            ref = snv.get("reference") or snv.get("Ref")
-            alt = snv.get("alternate") or snv.get("Alt")
+            coords = snv.get("variantCoordinates", {})
+            chr_ = coords.get("chromosome")
+            pos = coords.get("position")
+            ref = coords.get("reference")
+            alt = coords.get("alternate")
+
 
             # If MT GEL variant not found, skip to next variant
             if None in [chr_, pos, ref, alt]:
-                continue
+                raise ValueError(f"Exomiser SNV missing required coordinates: {snv}")
 
             is_mt = str(chr_) == "MT"
 
@@ -797,7 +799,7 @@ class excel():
                 if is_mt:
                     gel_tier = get_mt_gel_tier(chr_, pos, ref, alt)
 
-                    # Keep only MT variants with GEL tier = 3
+                    # Keep only MT variants with a GEL tier
                     if gel_tier is not None:
                         ev_to_look_at.append(event)
 
