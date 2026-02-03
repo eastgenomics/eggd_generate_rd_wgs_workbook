@@ -790,7 +790,7 @@ class excel():
 
             # If MT GEL variant not found, skip to next variant
             if None in [chr_, pos, ref, alt]:
-                raise ValueError(f"Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)")
+                raise ValueError("Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)")
 
             is_mt = str(chr_) == "MT"
 
@@ -970,8 +970,8 @@ class excel():
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         if 'Priority' in ex_df.columns:
-            summary_sheet['B31'] = ex_df['Priority'].str.startswith(
-                "De novo"
+            summary_sheet['B31'] = ex_df['Priority'].str.contains(
+                r'\bde novo\b', case=False, na=False
             ).sum()
             summary_sheet['B30'] = ex_df['Priority'].str.startswith(
                 'Exomiser'
