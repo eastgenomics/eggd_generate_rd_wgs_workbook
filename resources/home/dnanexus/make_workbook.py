@@ -737,6 +737,40 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         '''
+        def get_mt_gel_tier(chr_, pos, ref, alt):
+            """
+            Helper function to look up the highest GEL tier for a mitochondrial variant.
+            Returns integer tier or None if no tiered GEL event exists.
+            Inputs:
+                chr_ (str): Chromosome of the variant
+                pos (str): Position of the variant
+                ref (str): Reference allele of the variant
+                alt (str): Alternate allele of the variant
+            Outputs:
+                tier (int or None): Highest clinical GEL tier for the variant, or None if not found
+            """
+            gel_variants = self.wgs_data[self.genome_format][self.gel_index][self.genome_data_format]["variants"]
+
+            tier_nums = []
+            for gel_snv in gel_variants:
+                coords = gel_snv.get("variantCoordinates", {})
+                if (
+                    str(coords.get("chromosome")) == str(chr_) and
+                    str(coords.get("position")) == str(pos) and
+                    str(coords.get("reference")) == str(ref) and
+                    str(coords.get("alternate")) == str(alt)
+                ):
+                    for event in gel_snv["reportEvents"]:
+                        tier_str = event.get("tier")
+                        if tier_str is not None:
+                            # Extract numeric tier (e.g. "TIER3" -> 3)
+                            match = re.search(r'\d+', tier_str)
+                            if match:
+                                tier_nums.append(int(match.group()))
+
+                    return min(tier_nums) if tier_nums else None
+            return None
+
         variant_list = []
         ranked = []
         # Look through Exomiser SNVs and return those that are ranked
@@ -745,11 +779,31 @@ class excel():
                 self.ex_index
             ][self.genome_data_format]["variants"]:
             ev_to_look_at = []
+
+            # Get chr, pos, ref, alt for use in MT GEL tier lookup
+            coords = snv.get("variantCoordinates", {})
+            chr_ = coords.get("chromosome")
+            pos = coords.get("position")
+            ref = coords.get("reference")
+            alt = coords.get("alternate")
+
+
+            # If MT GEL variant not found, skip to next variant
+            if None in [chr_, pos, ref, alt]:
+                raise ValueError("Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)")
+
+            is_mt = str(chr_) == "MT"
+
             for event in snv["reportEvents"]:
-                # Filter out mitochondrial + untiered as these are likely
-                # artifacts
-                if event['tier'] is None:
-                    continue
+                #  MT variants must use GEL tier, not Exomiser tier
+                if is_mt:
+                    gel_tier = get_mt_gel_tier(chr_, pos, ref, alt)
+
+                    # Keep only MT variants with a GEL tier
+                    if gel_tier is not None:
+                        ev_to_look_at.append(event)
+
+                # Keep all autosomal events
                 else:
                     ev_to_look_at.append(event)
 
@@ -812,7 +866,10 @@ class excel():
                         self.father,
                         self.proband_sex
                     )
-                    var_dict["Priority"] = "De novo"
+                    if var_dict.get("Priority"):
+                        var_dict["Priority"] += "; De novo"
+                    else:
+                        var_dict["Priority"] = "De novo"
                     var_dict["Inheritance"] = "De novo"
                     var_dict["HGVSc"], var_dict["HGVSp"] = (
                         var_info.get_hgvs_gel(
@@ -824,6 +881,7 @@ class excel():
 
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
+
         if not ex_df.empty and not self.var_df.empty:
             # Convert all df columns to object type to allow merging without
             # conflicts
@@ -875,8 +933,8 @@ class excel():
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
-                denovo_df = ex_df[ex_df['Priority'].str.lower() == 'de novo'].copy()
-                exomiser_df = ex_df[ex_df['Priority'].str.lower() != "de novo"].copy()
+                denovo_df = ex_df[ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
+                exomiser_df = ex_df[~ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
 
                 if not exomiser_df.empty:
                     exomiser_df = var_info.get_top_3_ranked(exomiser_df)
@@ -912,8 +970,8 @@ class excel():
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         if 'Priority' in ex_df.columns:
-            summary_sheet['B31'] = ex_df['Priority'].str.startswith(
-                "De novo"
+            summary_sheet['B31'] = ex_df['Priority'].str.contains(
+                r'\bde novo\b', case=False, na=False
             ).sum()
             summary_sheet['B30'] = ex_df['Priority'].str.startswith(
                 'Exomiser'
