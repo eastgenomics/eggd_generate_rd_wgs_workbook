@@ -846,6 +846,10 @@ class excel():
                     self.mane,
                     self.refseq_tsv)
                 )
+            # Normalise Exomiser/MT zygosity
+            if var_dict.get("Zygosity") == "alternate_homozygous":
+                var_dict["Zygosity"] = "homozygous"
+
             variant_list.append(var_dict)
 
         # Get variants with high de novo quality score (these are either SNVs
@@ -877,6 +881,10 @@ class excel():
                             self.mane,
                             self.refseq_tsv)
                     )
+                    # Normalise Exomiser/MT zygosity
+                    if var_dict.get("Zygosity") == "alternate_homozygous":
+                        var_dict["Zygosity"] = "homozygous"
+
                     variant_list.append(var_dict)
 
         ex_df = pd.DataFrame(variant_list)
