@@ -884,7 +884,7 @@ class excel():
                             self.mane,
                             self.refseq_tsv)
                     )
-                    # Normalise Exomiser/MT zygosity
+                    # Normalise zygosity (e.g. alternate_homozygous to homozygous)
                     var_dict = self._normalise_zygosity(var_dict)
 
                     variant_list.append(var_dict)
