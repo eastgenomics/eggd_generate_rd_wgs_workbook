@@ -639,8 +639,7 @@ class excel():
                         self.father,
                         self.proband_sex
                         )
-                    if var_dict.get("Zygosity") == "alternate_homozygous":
-                        var_dict["Zygosity"] = "homozygous"
+                    var_dict = self._normalise_zygosity(var_dict)
                     c_dot, p_dot = var_info.get_hgvs_gel(
                         snv,
                         self.mane,
@@ -728,6 +727,11 @@ class excel():
 
         # Set column widths
         ExcelStyles.resize_variant_columns(self, self.workbook["Variants"])
+
+    def _normalise_zygosity(self, var_dict):
+        if var_dict.get("Zygosity") == "alternate_homozygous":
+            var_dict["Zygosity"] = "homozygous"
+        return var_dict
 
     def create_additional_analysis_page(self):
         '''
@@ -847,8 +851,7 @@ class excel():
                     self.refseq_tsv)
                 )
             # Normalise Exomiser/MT zygosity
-            if var_dict.get("Zygosity") == "alternate_homozygous":
-                var_dict["Zygosity"] = "homozygous"
+            var_dict = self._normalise_zygosity(var_dict)
 
             variant_list.append(var_dict)
 
@@ -882,8 +885,7 @@ class excel():
                             self.refseq_tsv)
                     )
                     # Normalise Exomiser/MT zygosity
-                    if var_dict.get("Zygosity") == "alternate_homozygous":
-                        var_dict["Zygosity"] = "homozygous"
+                    var_dict = self._normalise_zygosity(var_dict)
 
                     variant_list.append(var_dict)
 
