@@ -231,14 +231,21 @@ class excel():
         ExcelStyles.borders(self, row_ranges, summary_sheet)
 
     def get_summary_content(self,data):
+        req = data["interpretation_request_data"]['json_request']
+
+        # Get flags from JSON, look for interpretation_flags and interpretationFlags
+        key = next(
+            (k for k in req
+            if re.fullmatch("interpretationFlags", k, re.IGNORECASE)
+            or re.fullmatch("interpretation_flags", k, re.IGNORECASE)),
+            None
+        )
+
+        flags = req.get(key)
         return {
-            (1, 9): str(data["interpretation_request_data"]['json_request'].get(
-                            next((k for k in data["interpretation_request_data"]['json_request']
-                                 if re.fullmatch("interpretation_flags", k, re.IGNORECASE)),
-                            None)
-                            )
-                        ),
-                    (1, 2): data["family_id"]}
+            (1, 9): str(flags) if flags else None,
+            (1, 2): data["family_id"]
+        }
 
     def get_hpo_obo(self):
         '''
