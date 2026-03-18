@@ -859,6 +859,9 @@ class excel():
                 )
             # Normalise Exomiser/MT zygosity
             var_dict = self._normalise_zygosity(var_dict)
+            # Add de novo status for Exomiser variants if both are found for the variant
+            if snv['reportEvents'][0].get('segregationPattern') == 'deNovo':
+                var_dict["Priority"] += "; De novo"
 
             variant_list.append(var_dict)
 
@@ -952,6 +955,14 @@ class excel():
                 # Separate de novo and exomiser variants using case insensitive match
                 denovo_df = ex_df[ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
                 exomiser_df = ex_df[~ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
+                # Append de novo to priority for de novo variants so can be added to summary sheet
+                # Append "; De novo" to Exomiser rows that have a matching de novo variant
+                exomiser_df.loc[
+                    exomiser_df.set_index(['Chr','Pos','Ref','Alt']).index
+                    .isin(denovo_df.set_index(['Chr','Pos','Ref','Alt']).index),
+                    'Priority'
+                ] += "; De novo"
+
 
                 if not exomiser_df.empty:
                     exomiser_df = var_info.get_top_3_ranked(exomiser_df)
