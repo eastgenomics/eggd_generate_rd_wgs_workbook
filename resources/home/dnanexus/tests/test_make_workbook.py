@@ -1016,6 +1016,13 @@ class TestInterpretationFlags():
         result = excel_instance.get_summary_content(data)
         assert result[(1, 2)] == "FAM12345"
 
+    # Snake_case keys are accepted as well as camelCase
+    def test_snake_case_interpretation_flags_key(self):
+        data = self._make_wgs_data(
+            {"interpretation_flags": [{"interpretationFlag": "snake_flag"}]}
+        )
+        assert self._get_flags_cell(data) == "snake_flag"
+
 
 class TestWorkbookName:
     def test_workbook_name_generation(self):
