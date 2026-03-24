@@ -952,29 +952,68 @@ class TestHpoTerms():
 
 class TestInterpretationFlags():
     '''
-    Tests for interpretation flags extraction from JSON request
+    Tests for interpretation flags extraction in get_summary_content,
+    matching the behaviour of the current implementation.
     '''
-    wgs_data = {
-        "family_id": "FAM12345",
-        "interpretation_request_data": {
-            "json_request": {
-                "interpretation_flags": "Flag1, Flag2, Flag3"
+    @staticmethod
+    def _make_wgs_data(json_request_extra: dict) -> dict:
+        return {
+            "family_id": "FAM12345",
+            "interpretation_request_data": {
+                "json_request": json_request_extra
             }
-        },
-    }
-    summary_content = {}
+        }
 
-    def test_interpretation_flags_extraction(self,wgs_data=wgs_data):
-        '''
-        Test that interpretation flags are correctly extracted from JSON request
-        and added to summary_content dictionary.
-        '''
-        mock_args = MagicMock()
-        excel_instance = excel(mock_args)
-        result = excel_instance.get_summary_content(wgs_data)
-        summary_content = result.get((1, 9))
-        expected_flags = "Flag1, Flag2, Flag3"
-        assert summary_content == expected_flags
+    @staticmethod
+    def _get_flags_cell(wgs_data: dict):
+        excel_instance = excel(MagicMock())
+        return excel_instance.get_summary_content(wgs_data).get((1, 9))
+
+
+    # List of dicts — value under 'interpretationFlag'
+
+    def test_list_of_dicts_interpretation_flag_key(self):
+        data = self._make_wgs_data(
+            {"interpretationFlags": [{"interpretationFlag": "interesting_flag"}]}
+        )
+        assert self._get_flags_cell(data) == "interesting_flag"
+
+    # List of dicts — value under 'flag'
+    def test_list_of_dicts_flag_key_fallback(self):
+        data = self._make_wgs_data(
+            {"interpretationFlags": [{"flag": "fallback_flag"}]}
+        )
+        assert self._get_flags_cell(data) == "fallback_flag"
+
+    # interpretationFlag empty → fallback to flag
+    def test_list_of_dicts_empty_interpretation_flag_falls_back_to_flag(self):
+        data = self._make_wgs_data(
+            {"interpretationFlags": [{"interpretationFlag": "", "flag": "backup_flag"}]}
+        )
+        assert self._get_flags_cell(data) == "backup_flag"
+
+    # Missing key → None
+    def test_missing_flags_key_returns_none(self):
+        data = self._make_wgs_data({})
+        assert self._get_flags_cell(data) is None
+
+    # Empty list → None
+    def test_empty_list_returns_none(self):
+        data = self._make_wgs_data({"interpretationFlags": []})
+        assert self._get_flags_cell(data) is None
+
+    # List whose first element is not a dict → None
+    def test_list_of_non_dicts_returns_none(self):
+        data = self._make_wgs_data(
+            {"interpretationFlags": ["plain_string_entry"]}
+        )
+        assert self._get_flags_cell(data) is None
+
+    # family_id always returned
+    def test_family_id_always_returned(self):
+        data = self._make_wgs_data({})
+        excel_instance = excel(MagicMock())
+        result = excel_instance.get_summary_content(data)
         assert result[(1, 2)] == "FAM12345"
 
 
