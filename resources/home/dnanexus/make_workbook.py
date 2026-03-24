@@ -243,7 +243,7 @@ class excel():
 
         flags = req.get(key)
         return {
-            (1, 9): str(flags) if flags else None,
+            (1, 9): flags[0].get("interpretationFlag") if isinstance(flags, list) and flags else None,
             (1, 2): data["family_id"]
         }
 
