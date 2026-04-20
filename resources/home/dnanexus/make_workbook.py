@@ -829,7 +829,7 @@ class excel():
                 top_event = min(ev_to_look_at, key=lambda x:
                     x['vendorSpecificScores']['rank']
                 )
-                snv['reportEvents'] = top_event
+                snv['reportEvents'] = [top_event]
                 ranked.append(snv)
 
         # We only want Exomiser variants with a score >= 0.75, so we need to
@@ -867,6 +867,8 @@ class excel():
             if snv['reportEvents'][0].get('segregationPattern') == 'deNovo':
                 var_dict["Priority"] += "; De novo"
 
+            var_dict.pop("Tier", None)
+            var_dict.pop("tier", None)
             variant_list.append(var_dict)
 
         # Get variants with high de novo quality score (these are either SNVs
