@@ -840,7 +840,8 @@ class excel():
 
         for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
-            snv['reportEvents'] = [snv['reportEvents']]
+            if isinstance(snv['reportEvents'], dict):
+                snv['reportEvents'] = [snv['reportEvents']]
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
