@@ -236,16 +236,23 @@ class excel():
         # Get flags from JSON, look for interpretation_flags and interpretationFlags
         key = next(
             (k for k in req
-            if re.fullmatch("interpretationFlags", k, re.IGNORECASE)
-            or re.fullmatch("interpretation_flags", k, re.IGNORECASE)),
+            if k.lower() == "interpretationflags"
+            or k.lower() == "interpretation_flags"),
             None
         )
 
+        flag_value = None
+
         flags = req.get(key)
         if isinstance(flags, list) and flags and isinstance(flags[0], dict):
-            flag_value = flags[0].get("additionalDescription")
-        else:
-            flag_value = None
+            entry = flags[0]
+
+            # Priority order required by tests:
+            for candidate in ("interpretationFlag", "flag", "additionalDescription"):
+                val = entry.get(candidate)
+                if val:  # non-empty
+                    flag_value = val
+                    break
         return {
             (1, 9): flag_value,
             (1, 2): data["family_id"]
