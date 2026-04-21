@@ -927,6 +927,8 @@ class excel():
             )
             # Remove duplicate columns created by merge
             merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
+            # Remove any GEL Tier columns
+            merge_df = merge_df.drop(columns=[c for c in merge_df.columns if c.lower() == "tier"], errors="ignore")
 
             merge_df = merge_df[merge_df['_merge'] == 'left_only']
             # Reset index after filtering
