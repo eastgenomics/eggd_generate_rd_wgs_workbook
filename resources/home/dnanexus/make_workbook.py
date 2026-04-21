@@ -904,6 +904,15 @@ class excel():
                     # Normalise zygosity (e.g. alternate_homozygous to homozygous)
                     var_dict = self._normalise_zygosity(var_dict)
 
+                    # Remove GEL tier from priority string
+                    if isinstance(var_dict.get("Priority"), str):
+                        var_dict["Priority"] = re.sub(
+                            r"TIER\d+[A-Z]?",
+                            "",
+                            var_dict["Priority"],
+                            flags=re.IGNORECASE
+                        ).strip(" ;")
+
                     # Remove GEL tier
                     var_dict.pop("Tier", None)
                     var_dict.pop("tier", None)
