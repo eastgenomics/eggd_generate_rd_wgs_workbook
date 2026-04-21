@@ -904,6 +904,10 @@ class excel():
                     # Normalise zygosity (e.g. alternate_homozygous to homozygous)
                     var_dict = self._normalise_zygosity(var_dict)
 
+                    # Remove GEL tier
+                    var_dict.pop("Tier", None)
+                    var_dict.pop("tier", None)
+
                     variant_list.append(var_dict)
 
         ex_df = pd.DataFrame(variant_list)
