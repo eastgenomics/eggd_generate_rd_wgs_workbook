@@ -243,7 +243,7 @@ class excel():
 
         flags = req.get(key)
         if isinstance(flags, list) and flags and isinstance(flags[0], dict):
-            flag_value = req.get("additionalDescription")
+            flag_value = flags[0].get("additionalDescription")
         else:
             flag_value = None
         return {
