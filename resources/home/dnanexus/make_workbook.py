@@ -835,7 +835,7 @@ class excel():
         # We only want Exomiser variants with a score >= 0.75, so we need to
         # filter the list to keep only these
         ranked_and_above_threshold = [
-            x for x in ranked if x['reportEvents']['score'] >= 0.75
+            x for x in ranked if x['reportEvents'][0]['score'] >= 0.75
         ]
 
         for snv in ranked_and_above_threshold:
