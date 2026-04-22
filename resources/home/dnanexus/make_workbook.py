@@ -246,13 +246,15 @@ class excel():
         flags = req.get(key)
         if isinstance(flags, list) and flags and isinstance(flags[0], dict):
             entry = flags[0]
+        else:
+            entry = {}
 
-            # Priority order required by tests:
-            for candidate in ("additionalDescription", "interpretationFlag", "flag"):
-                val = entry.get(candidate)
-                if val:  # non-empty
-                    flag_value = val
-                    break
+        # Priority order required by tests:
+        for candidate in ("additionalDescription", "interpretationFlag", "flag"):
+            val = entry.get(candidate)
+            if val:  # non-empty
+                flag_value = val
+                break
         return {
             (1, 9): flag_value,
             (1, 2): data["family_id"]
