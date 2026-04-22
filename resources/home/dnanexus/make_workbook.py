@@ -248,7 +248,7 @@ class excel():
             entry = flags[0]
 
             # Priority order required by tests:
-            for candidate in ("interpretationFlag", "flag", "additionalDescription"):
+            for candidate in ("additionalDescription", "interpretationFlag", "flag"):
                 val = entry.get(candidate)
                 if val:  # non-empty
                     flag_value = val
