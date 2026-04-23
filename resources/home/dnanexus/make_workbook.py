@@ -236,16 +236,25 @@ class excel():
         # Get flags from JSON, look for interpretation_flags and interpretationFlags
         key = next(
             (k for k in req
-            if re.fullmatch("interpretationFlags", k, re.IGNORECASE)
-            or re.fullmatch("interpretation_flags", k, re.IGNORECASE)),
+            if k.lower() == "interpretationflags"
+            or k.lower() == "interpretation_flags"),
             None
         )
 
+        flag_value = None
+
         flags = req.get(key)
         if isinstance(flags, list) and flags and isinstance(flags[0], dict):
-            flag_value = flags[0].get("interpretationFlag") or flags[0].get("flag")
+            entry = flags[0]
         else:
-            flag_value = None
+            entry = {}
+
+        # Priority order required by tests:
+        for candidate in ("additionalDescription", "interpretationFlag", "flag"):
+            val = entry.get(candidate)
+            if val:  # non-empty
+                flag_value = val
+                break
         return {
             (1, 9): flag_value,
             (1, 2): data["family_id"]
@@ -829,18 +838,19 @@ class excel():
                 top_event = min(ev_to_look_at, key=lambda x:
                     x['vendorSpecificScores']['rank']
                 )
-                snv['reportEvents'] = top_event
+                snv['reportEvents'] = [top_event]
                 ranked.append(snv)
 
         # We only want Exomiser variants with a score >= 0.75, so we need to
         # filter the list to keep only these
         ranked_and_above_threshold = [
-            x for x in ranked if x['reportEvents']['score'] >= 0.75
+            x for x in ranked if x['reportEvents'][0]['score'] >= 0.75
         ]
 
         for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
-            snv['reportEvents'] = [snv['reportEvents']]
+            if isinstance(snv['reportEvents'], dict):
+                snv['reportEvents'] = [snv['reportEvents']]
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
@@ -867,6 +877,8 @@ class excel():
             if snv['reportEvents'][0].get('segregationPattern') == 'deNovo':
                 var_dict["Priority"] += "; De novo"
 
+            var_dict.pop("Tier", None)
+            var_dict.pop("tier", None)
             variant_list.append(var_dict)
 
         # Get variants with high de novo quality score (these are either SNVs
@@ -901,6 +913,19 @@ class excel():
                     # Normalise zygosity (e.g. alternate_homozygous to homozygous)
                     var_dict = self._normalise_zygosity(var_dict)
 
+                    # Remove GEL tier from priority string
+                    if isinstance(var_dict.get("Priority"), str):
+                        var_dict["Priority"] = re.sub(
+                            r"TIER\d+[A-Z]?",
+                            "",
+                            var_dict["Priority"],
+                            flags=re.IGNORECASE
+                        ).strip(" ;")
+
+                    # Remove GEL tier
+                    var_dict.pop("Tier", None)
+                    var_dict.pop("tier", None)
+
                     variant_list.append(var_dict)
 
         ex_df = pd.DataFrame(variant_list)
@@ -920,6 +945,8 @@ class excel():
             )
             # Remove duplicate columns created by merge
             merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
+            # Remove any GEL Tier columns
+            merge_df = merge_df.drop(columns=[c for c in merge_df.columns if c.lower() == "tier"], errors="ignore")
 
             merge_df = merge_df[merge_df['_merge'] == 'left_only']
             # Reset index after filtering
