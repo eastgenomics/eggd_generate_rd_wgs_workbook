@@ -375,9 +375,14 @@ def get_top_3_ranked(df):
         variants in the top three ranks
     '''
     # First change "Exomiser Rank #" string to int
+    # extracts the rank from "Exomiser Rank X" and ignores De novo if present
     df['priority_as_int'] = df['Priority'].map(
-        lambda x: int(x.split(' ')[-1])
+        lambda x: int(x.split(';')[0].split(' ')[-1]) if "Exomiser Rank" in x else None
     )
+
+    # Ignore variants without an Exomiser rank
+    df = df[df['priority_as_int'].notna()]
+
     # Get unique ranks and sort, selecting the top three ranks
     unique_ranks = df['priority_as_int'].unique()
     top_3_ranks = sorted(unique_ranks)[:3]
