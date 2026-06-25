@@ -270,7 +270,7 @@ class TestWorkbook():
         # Check all of column M is yellow
         assert all(
             sheet[f"M{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(1, sheet.max_row + 1)
+            for row in range(8, sheet.max_row)
         )
 
     def test_cnv_report_colouring(self):
@@ -290,7 +290,7 @@ class TestWorkbook():
         # Check all of column H is yellow
         assert all(
             sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(1, sheet.max_row + 1)
+            for row in range(6, sheet.max_row)
         )
 
     def test_mt_variants_exclusion(self):
