@@ -1055,6 +1055,7 @@ class excel():
             "Gene Content:": [7, 2],
             "Evidence": [6, 3],
             "Possible evidence": [6, 7],
+            "Checker comments": [6, 8],
             "Prevalence in controls": [11, 2],
             "Microdel/dup syndromes": [13, 2],
             "Literature search": [15, 2],
@@ -1104,6 +1105,7 @@ class excel():
 
         cnv.column_dimensions['B'].width = 35
         cnv.column_dimensions['G'].width = 20
+        cnv.column_dimensions['H'].width = 20
         for col in ['C', 'D', 'E', 'F']:
             cnv.column_dimensions[col].width = 15
 
@@ -1126,19 +1128,19 @@ class excel():
         # define which rows should have borders
         row_ranges = {
             'horizontal': [
-                'B3:D3', 'B4:F4', 'B6:G6', 'B7:G7', 'B8:G8', 'B9:G9',
-                'B10:G10', 'B11:G11',
-                'B12:G12', 'B13:G13', 'B14:G14', 'B15:G15', 'B16:G16',
-                'B17:G17', 'B18:G18', 'B19:G19', 'B20:G20',
+                'B3:D3', 'B4:F4', 'B6:H6', 'B7:H7', 'B8:H8', 'B9:H9',
+                'B10:H10', 'B11:H11',
+                'B12:H12', 'B13:H13', 'B14:H14', 'B15:H15', 'B16:H16',
+                'B17:H17', 'B18:H18', 'B19:H19', 'B20:H20',
             ],
             'horizontal_thick': [
-                'B3:F3', 'B5:F5', 'B6:G6', 'B7:G7', 'B20:G20', 'B21:G21'
+                'B3:F3', 'B5:F5', 'B6:H6', 'B7:H7', 'B20:H20', 'B21:H21'
             ],
             'vertical': [
                 'E2:E3', 'G6:G20'
             ],
             'vertical_thick': [
-                'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20'
+                'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20', 'I6:I20'
             ]
         }
 
@@ -1161,7 +1163,7 @@ class excel():
             )
         # Implement colour labelling
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        for row in range(1, cnv.max_row + 1):
+        for row in range(6, cnv.max_row):
             cnv[f"H{row}"].fill = yellow_fill
 
     def write_snv_reporting_template(self, report_sheet_num) -> None:
