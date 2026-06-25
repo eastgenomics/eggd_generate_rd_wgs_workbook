@@ -911,6 +911,16 @@ class TestVariantNomenclature():
             refseq_tsv, "ENST0000033", "ENSP"
         ) == "ENSP0000044"
 
+    def test_get_nm(self):
+        '''
+        Check that the get_nm function returns NM transcript ID in the same list
+        '''
+        refseq_tsv = ["ENSG00000105464.4\tNMDA\tNM_000836.4",
+                      "ENSG00000171428.15\tNAT1\tNM_000662.8"]
+        assert var_info.look_up_id_in_refseq_mane_conversion_file(
+            refseq_tsv, "ENSG00000105464.4", "NM_"
+        ) == "NM_000836.4"
+
 
 class TestHpoTerms():
     '''
