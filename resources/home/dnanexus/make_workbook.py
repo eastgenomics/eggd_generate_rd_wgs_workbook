@@ -1055,6 +1055,7 @@ class excel():
             "Gene Content:": [7, 2],
             "Evidence": [6, 3],
             "Possible evidence": [6, 7],
+            "Checker comments": [6, 8],
             "Prevalence in controls": [11, 2],
             "Microdel/dup syndromes": [13, 2],
             "Literature search": [15, 2],
@@ -1104,6 +1105,7 @@ class excel():
 
         cnv.column_dimensions['B'].width = 35
         cnv.column_dimensions['G'].width = 20
+        cnv.column_dimensions['H'].width = 20
         for col in ['C', 'D', 'E', 'F']:
             cnv.column_dimensions[col].width = 15
 
@@ -1126,19 +1128,19 @@ class excel():
         # define which rows should have borders
         row_ranges = {
             'horizontal': [
-                'B3:D3', 'B4:F4', 'B6:G6', 'B7:G7', 'B8:G8', 'B9:G9',
-                'B10:G10', 'B11:G11',
-                'B12:G12', 'B13:G13', 'B14:G14', 'B15:G15', 'B16:G16',
-                'B17:G17', 'B18:G18', 'B19:G19', 'B20:G20',
+                'B3:D3', 'B4:F4', 'B6:H6', 'B7:H7', 'B8:H8', 'B9:H9',
+                'B10:H10', 'B11:H11',
+                'B12:H12', 'B13:H13', 'B14:H14', 'B15:H15', 'B16:H16',
+                'B17:H17', 'B18:H18', 'B19:H19', 'B20:H20',
             ],
             'horizontal_thick': [
-                'B3:F3', 'B5:F5', 'B6:G6', 'B7:G7', 'B20:G20', 'B21:G21'
+                'B3:F3', 'B5:F5', 'B6:H6', 'B7:H7', 'B20:H20', 'B21:H21'
             ],
             'vertical': [
                 'E2:E3', 'G6:G20'
             ],
             'vertical_thick': [
-                'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20'
+                'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20', 'I6:I20'
             ]
         }
 
@@ -1161,7 +1163,7 @@ class excel():
             )
         # Implement colour labelling
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        for row in range(1, cnv.max_row + 1):
+        for row in range(6, cnv.max_row):
             cnv[f"H{row}"].fill = yellow_fill
 
     def write_snv_reporting_template(self, report_sheet_num) -> None:
@@ -1181,6 +1183,8 @@ class excel():
             "Gene": [2, 2],
             "HGVSc": [2, 3],
             "HGVSp": [2, 4],
+            "Transcript checked:": [2, 7],
+            "IGV checked:": [3, 7],
             "EVIDENCE": [8, 3],
             "PATHOGENIC": [8, 7],
             "P_STRENGTH": [8, 8],
@@ -1188,6 +1192,7 @@ class excel():
             "BENIGN": [8, 10],
             "B_STRENGTH": [8, 11],
             "B_POINTS": [8, 12],
+            "Checker comments": [8, 13],
             "Associated disease": [4, 2],
             "Known inheritance": [5, 2],
             "Prevalence": [6, 2],
@@ -1310,12 +1315,13 @@ class excel():
         report.column_dimensions['D'].width = 35
         report.column_dimensions['E'].width = 5
         report.column_dimensions['F'].width = 5
-        report.column_dimensions['G'].width = 14
+        report.column_dimensions['G'].width = 24
         report.column_dimensions['H'].width = 14
         report.column_dimensions['I'].width = 14
         report.column_dimensions['J'].width = 14
         report.column_dimensions['K'].width = 14
         report.column_dimensions['L'].width = 14
+        report.column_dimensions['M'].width = 20
 
         # do some colouring
         colour_cells = {
@@ -1340,21 +1346,22 @@ class excel():
         row_ranges = {
             'horizontal': [
                 'B3:D3', 'B4:J4', 'B5:L5',
-                'B6:L6', 'B7:L7', 'B8:L8', 'B9:L9', 'B10:L10', 'B11:L11',
-                'B12:L12', 'B13:L13', 'B14:L14', 'B15:L15', 'B16:L16',
-                'B17:L17', 'B18:L18', 'B19:L19', 'B20:L20', 'B21:L21',
-                'B22:L22', 'B23:L23', 'B24:L24', 'B25:L25'
+                'B6:L6', 'B7:L7', 'B8:L8', 'B9:M9', 'B10:M10', 'B11:M11',
+                'B12:M12', 'B13:M13', 'B14:M14', 'B15:M15', 'B16:M16',
+                'B17:M17', 'B18:M18', 'B19:M19', 'B20:M20', 'B21:M21',
+                'B22:M22', 'B23:M23', 'B24:M24', 'B25:M25', 'G3:G3'
             ],
             'horizontal_thick': [
-                'B2:D2', 'B4:L4', 'B7:L7', 'B8:L8', 'B26:L26', 'B27:L27'
+                'B2:D2', 'B4:L4', 'B7:L7', 'B8:M8', 'B26:M26', 'B27:M27',
+                'G2:G2'
             ],
             'vertical': [
                 'E2:E3', 'G8:G26', 'H8:H25', 'I8:I25', 'J8:J25',
                 'K8:K25', 'L8:L25',
             ],
             'vertical_thick': [
-                'B2:B6', 'B8:B26', 'C2:C6', 'C8:C26', 'M4:M6', 'M8:M26',
-                'E2:E3'
+                'B2:B6', 'B8:B26', 'C2:C6', 'C8:C26', 'G2:G3', 'H2:H3',
+                'M4:M6', 'M8:M26', 'N8:N26', 'E2:E3'
             ]
         }
         ExcelStyles.borders(self, row_ranges, report)
@@ -1362,7 +1369,7 @@ class excel():
         # Implement colour labelling
         # Adding yellow to Column M (checker comments column)
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        for row in range(1, report.max_row + 1):
+        for row in range(8, report.max_row):
             report[f"M{row}"].fill = yellow_fill
 
         # Adding yellow to G2 and G3 (Transcripts/IGV checked column)
