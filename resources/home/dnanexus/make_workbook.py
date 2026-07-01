@@ -1162,9 +1162,6 @@ class excel():
                 wrapText=True, vertical="center", horizontal="center"
             )
         # Implement colour labelling
-        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        for row in range(6, cnv.max_row):
-            cnv[f"H{row}"].fill = yellow_fill
 
     def write_snv_reporting_template(self, report_sheet_num) -> None:
         """
@@ -1369,8 +1366,6 @@ class excel():
         # Implement colour labelling
         # Adding yellow to Column M (checker comments column)
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        for row in range(8, report.max_row):
-            report[f"M{row}"].fill = yellow_fill
 
         # Adding yellow to G2 and G3 (Transcripts/IGV checked column)
         report["G2"].fill = yellow_fill

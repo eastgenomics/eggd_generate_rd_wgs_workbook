@@ -267,32 +267,6 @@ class TestWorkbook():
         assert sheet["G2"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
         assert sheet["G3"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
 
-        # Check all of column M is yellow
-        assert all(
-            sheet[f"M{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(8, sheet.max_row)
-        )
-
-    def test_cnv_report_colouring(self):
-        '''
-        Test that the function to add CNV reporting colouring to the workbook
-        runs without error.
-        '''
-        wb = Workbook()
-        wb.remove(wb.active)
-        writer = excel(None)
-        writer.workbook = wb
-
-        writer.write_cnv_reporting_template(1)
-        sheet = wb["cnv_interpret_1"]
-
-
-        # Check all of column H is yellow
-        assert all(
-            sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(6, sheet.max_row)
-        )
-
     def test_mt_variants_exclusion(self):
         """
         Ensure MT variants where both Exomiser and GEL tiering are null
