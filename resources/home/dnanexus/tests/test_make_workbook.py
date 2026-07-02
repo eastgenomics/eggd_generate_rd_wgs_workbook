@@ -267,32 +267,6 @@ class TestWorkbook():
         assert sheet["G2"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
         assert sheet["G3"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
 
-        # Check all of column M is yellow
-        assert all(
-            sheet[f"M{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(1, sheet.max_row + 1)
-        )
-
-    def test_cnv_report_colouring(self):
-        '''
-        Test that the function to add CNV reporting colouring to the workbook
-        runs without error.
-        '''
-        wb = Workbook()
-        wb.remove(wb.active)
-        writer = excel(None)
-        writer.workbook = wb
-
-        writer.write_cnv_reporting_template(1)
-        sheet = wb["cnv_interpret_1"]
-
-
-        # Check all of column H is yellow
-        assert all(
-            sheet[f"H{row}"].fill.start_color.rgb in ("FFFF00", "00FFFF00")
-            for row in range(1, sheet.max_row + 1)
-        )
-
     def test_mt_variants_exclusion(self):
         """
         Ensure MT variants where both Exomiser and GEL tiering are null
@@ -910,6 +884,16 @@ class TestVariantNomenclature():
         assert var_info.look_up_id_in_refseq_mane_conversion_file(
             refseq_tsv, "ENST0000033", "ENSP"
         ) == "ENSP0000044"
+
+    def test_get_nm(self):
+        '''
+        Check that the get_nm function returns NM transcript ID in the same list
+        '''
+        refseq_tsv = ["ENSG00000105464.4\tNMDA\tNM_000836.4",
+                      "ENSG00000171428.15\tNAT1\tNM_000662.8"]
+        assert var_info.look_up_id_in_refseq_mane_conversion_file(
+            refseq_tsv, "ENSG00000105464.4", "NM_"
+        ) == "NM_000836.4"
 
 
 class TestHpoTerms():

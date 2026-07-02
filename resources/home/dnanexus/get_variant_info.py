@@ -235,7 +235,7 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
     ]["repeatedSequence"]
     # Get the repeat number from the JSON for one allele
     var_dict["STR1"] = num_copies(variant, pb_idx, 0)
-    # Get the repeat number from the JSON for the other allele 
+    # Get the repeat number from the JSON for the other allele
     # only if the STR is not in the X chromosome of a XY proband
     if var_dict["Chr"] in ["X"] and pb_sex == "MALE":
         var_dict["STR2"] = ""
@@ -285,7 +285,7 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
         p_sex=pb_sex,
         chrom=var_dict["Chr"]
     )
-    
+
     var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
     var_dict["Gene"] = get_gene_symbol(variant)
     var_dict['AF Max'] = get_af_max(variant)
@@ -304,7 +304,7 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
 
 def get_zygosity(zygosity, p_sex, chrom):
     '''
-    Get the zygosity of the variant, and if the variant is heterozygous, 
+    Get the zygosity of the variant, and if the variant is heterozygous,
     on the X chromosome and the proband is male then set the
     zygosity to hemizygous.
 
@@ -403,7 +403,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
             nomenclature conversion file. Either the MANE file, which has only
             MANE information, or the RefSeq file which has all RefSeq
             transcripts
-            id_type (str): string to match on e.g. NM to get the MANE
+            id_type (str): string to match on e.g. NM_ to get the MANE
             transcript or ENSP to get the corresponding protein ID
         Outputs:
             matched_id (str): Matched ID or None if no match found.
@@ -453,7 +453,7 @@ def get_hgvs_exomiser(variant, mane, refseq_tsv):
         ]['hgvs']
     # Try converting Ensembl transcript to get RefSeq MANE
     refseq = look_up_id_in_refseq_mane_conversion_file(
-        mane, hgvs_source.split(':')[1], "NM"
+        mane, hgvs_source.split(':')[1], "NM_"
     )
 
     # If no MANE, return Ensembl transcript nomenclature
@@ -498,7 +498,7 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
     # Check for a MANE match
     for cdna in cdnas:
         refseq = look_up_id_in_refseq_mane_conversion_file(
-            mane, cdna.split('(')[0], "NM"
+            mane, cdna.split('(')[0], "NM_"
         )
 
         if refseq is not None:
@@ -510,7 +510,7 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
         hgvs_c_list = []
         ensp_list = []
         for cdna in cdnas:
-            hgvs_c_list.append(re.sub("\(.*?\)", "", cdna))
+            hgvs_c_list.append(re.sub(r"\(.*?\)", "", cdna))
         for protein in protein_changes:
             ensp_list.append(protein)
         hgvs_c = ', '.join(hgvs_c_list)
