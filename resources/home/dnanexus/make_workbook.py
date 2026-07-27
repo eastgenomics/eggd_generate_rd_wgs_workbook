@@ -931,56 +931,67 @@ class excel():
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
 
-        if not ex_df.empty and not self.var_df.empty:
-            # Convert all df columns to object type to allow merging without
-            # conflicts
-            ex_df = ex_df.astype(object)
-            self.var_df = self.var_df.astype(object)
-            merge_df = ex_df.merge(
-                self.var_df,
-                on=["Chr", 'Pos', 'Ref', 'Alt'],
-                how='left',
-                indicator=True,
-                suffixes=[None, "_y"]
-            )
-            # Remove duplicate columns created by merge
-            merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
-            # Remove any GEL Tier columns
-            merge_df = merge_df.drop(columns=[c for c in merge_df.columns if c.lower() == "tier"], errors="ignore")
+        if not ex_df.empty:
+            if not self.var_df.empty:
+                # Convert all df columns to object type to allow merging without
+                # conflicts
+                ex_df = ex_df.astype(object)
+                self.var_df = self.var_df.astype(object)
+                merge_df = ex_df.merge(
+                    self.var_df,
+                    on=["Chr", 'Pos', 'Ref', 'Alt'],
+                    how='left',
+                    indicator=True,
+                    suffixes=[None, "_y"]
+                )
+                # Remove duplicate columns created by merge
+                merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
+                # Remove any GEL Tier columns
+                merge_df = merge_df.drop(columns=[c for c in merge_df.columns if c.lower() == "tier"], errors="ignore")
 
-            merge_df = merge_df[merge_df['_merge'] == 'left_only']
-            # Reset index after filtering
-            merge_df = merge_df.reset_index(drop=True)
-            # Drop merge column
-            merge_df = merge_df.drop(columns=['_merge'])
-            # Reset index again
-            merge_df = merge_df.reset_index(drop=True)
+                merge_df = merge_df[merge_df['_merge'] == 'left_only']
+                # Reset index after filtering
+                merge_df = merge_df.reset_index(drop=True)
+                # Drop merge column
+                merge_df = merge_df.drop(columns=['_merge'])
+                # Reset index again
+                merge_df = merge_df.reset_index(drop=True)
 
-            # Now apply the Tier/Tier_y filtering
-            if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
+                # Now apply the Tier/Tier_y filtering
+                if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
 
-                # Collapse duplicate Tier_y columns if merge created more than one
-                if isinstance(merge_df["Tier_y"], pd.DataFrame):
-                    merge_df["Tier_y"] = merge_df["Tier_y"].iloc[:, 0]
+                    # Collapse duplicate Tier_y columns if merge created more than one
+                    if isinstance(merge_df["Tier_y"], pd.DataFrame):
+                        merge_df["Tier_y"] = merge_df["Tier_y"].iloc[:, 0]
 
-                # Normalize None to pd.NA to make sure proper isna() filtering is done
-                merge_df["Tier"] = merge_df["Tier"].replace({None: pd.NA})
-                merge_df["Tier_y"] = merge_df["Tier_y"].replace({None: pd.NA})
+                    # Normalize None to pd.NA to make sure proper isna() filtering is done
+                    merge_df["Tier"] = merge_df["Tier"].replace({None: pd.NA})
+                    merge_df["Tier_y"] = merge_df["Tier_y"].replace({None: pd.NA})
 
-                # Filter out MT variants where Tier and Tier_y are missing
-                merge_df = merge_df[
-                    ~(
-                        (merge_df['Chr'] == 'MT') &
-                        merge_df['Tier'].isna() &
-                        merge_df['Tier_y'].isna()
-                    )
-                ]
+                    # Filter out MT variants where Tier and Tier_y are missing
+                    merge_df = merge_df[
+                        ~(
+                            (merge_df['Chr'] == 'MT') &
+                            merge_df['Tier'].isna() &
+                            merge_df['Tier_y'].isna()
+                        )
+                    ]
 
-            # Keep left only == keep only those that are in exomiser df and
-            # not in tiered df
-            # Clean up df by dropping merge column and columns ending _y
-            cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
-            ex_df = merge_df.drop(columns=cols_to_drop)
+                # Keep left only == keep only those that are in exomiser df and
+                # not in tiered df
+                # Clean up df by dropping merge column and columns ending _y
+                cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
+                ex_df = merge_df.drop(columns=cols_to_drop)
+
+            # If var_df is empty, we can just use ex_df as is, but we still need to filter out MT variants with no GEL tier
+            else:
+                if "Tier" in ex_df.columns:
+                    ex_df = ex_df[
+                        ~(
+                            (ex_df['Chr'] == 'MT') &
+                            ex_df['Tier'].isna()
+                        )
+                    ]
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
