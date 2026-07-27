@@ -613,7 +613,8 @@ class excel():
     def str_image_page(self):
         '''
         STR table is useful for interpretation, so will be included on a sheet
-        so it can be referred to during interpretation.
+        so it can be referred to during interpretation. Also adds STRs underneath
+        the guidelines for interpretation.
         Inputs:
             None
         Outputs:
@@ -631,6 +632,33 @@ class excel():
             "Sequencing & Next Generation Sequencing Panel Interpretation & "
             "Reporting"
         )
+
+        str_list = []
+
+        # STRs
+        for s_t_r in self.wgs_data[self.genome_format][
+            self.gel_index
+            ][self.genome_data_format][
+                "shortTandemRepeats"
+            ]:
+            for event in s_t_r["reportEvents"]:
+                event_index = s_t_r["reportEvents"].index(event)
+                var_dict = var_info.get_str_info(
+                    s_t_r, self.proband, self.column_list, event_index, self.proband_sex
+                )
+                str_list.append(var_dict)
+
+        # Add all variants into dataframe
+        self.str_df = pd.DataFrame(str_list)
+        self.str_df = self.str_df.drop_duplicates()
+
+        self.str_df.to_excel(
+                    self.writer, sheet_name="STR guidelines", index=False
+                )
+        
+        # Set column widths
+        ExcelStyles.resize_variant_columns(self, self.workbook["STR guidelines"])
+        
 
     def create_gel_tiering_variant_page(self):
         '''
