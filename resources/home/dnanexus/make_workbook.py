@@ -732,6 +732,13 @@ class excel():
         self.var_df = pd.DataFrame(variant_list)
         self.var_df = self.var_df.drop_duplicates()
 
+        # pd.DataFrame([]) has no columns, so if there are no variants,
+        # force the expected columns so headers still get written below
+        if self.var_df.empty:
+            self.var_df = pd.DataFrame(columns=self.column_list)
+
+        print(self.var_df.empty)
+
         # Prepare to add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         count_dict = {
@@ -770,6 +777,7 @@ class excel():
             for cell in count_dict.keys():
                 summary_sheet[cell] = 0
 
+        # Write variant dataframe to workbook
         self.var_df.to_excel(
             self.writer, sheet_name="Variants", index=False
         )
