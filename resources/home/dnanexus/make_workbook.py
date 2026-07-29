@@ -620,19 +620,7 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         '''
-        str_sheet = self.workbook.create_sheet("STR guidelines")
-        script_dir = os.path.dirname(__file__)
-        img_folder = "images/str_table.png"
-        img_path = os.path.join(script_dir, img_folder)
-        img = openpyxl.drawing.image.Image(img_path)
-        img.anchor = 'B4'
-        str_sheet.add_image(img)
-        str_sheet['B2'] = (
-            "From CU-WG-REF-40 Guidelines for Rare Disease Whole Genome "
-            "Sequencing & Next Generation Sequencing Panel Interpretation & "
-            "Reporting"
-        )
-
+        
         str_list = []
 
         # STRs
@@ -653,11 +641,24 @@ class excel():
         self.str_df = self.str_df.drop_duplicates()
 
         self.str_df.to_excel(
-                    self.writer, sheet_name="STR guidelines", index=False
+                    self.writer, sheet_name="STR guidelines", index=False, startrow=60
                 )
         
         # Set column widths
         ExcelStyles.resize_variant_columns(self, self.workbook["STR guidelines"])
+
+        str_sheet = self.workbook["STR guidelines"]
+        script_dir = os.path.dirname(__file__)
+        img_folder = "images/str_table.png"
+        img_path = os.path.join(script_dir, img_folder)
+        img = openpyxl.drawing.image.Image(img_path)
+        img.anchor = 'B4'
+        str_sheet.add_image(img)
+        str_sheet['B2'] = (
+            "From CU-WG-REF-40 Guidelines for Rare Disease Whole Genome "
+            "Sequencing & Next Generation Sequencing Panel Interpretation & "
+            "Reporting"
+        )
         
 
     def create_gel_tiering_variant_page(self):
