@@ -737,8 +737,6 @@ class excel():
         if self.var_df.empty:
             self.var_df = pd.DataFrame(columns=self.column_list)
 
-        print(self.var_df.empty)
-
         # Prepare to add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         count_dict = {
