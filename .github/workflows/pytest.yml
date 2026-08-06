@@ -22,5 +22,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run unit tests
-        run: python -m pytest resources/home/dnanexus/tests/test_make_workbook.py 
+      - name: Run unit tests with coverage
+        run: >
+          python -m pytest resources/home/dnanexus/tests/test_make_workbook.py
+          --cov=resources/home/dnanexus
+          --cov-report=term-missing
+          --cov-report=xml
+
+      - name: Upload coverage report
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage.xml
+          language: Python
+          label: code-coverage/pytest

@@ -2,7 +2,7 @@ import re
 
 
 def add_columns_to_dict(column_list):
-    '''
+    """
     Function to add columns to variant pages.
     All columns are empty strings, so they can be overwritten by values if
     needed, but left blank if not.
@@ -11,7 +11,7 @@ def add_columns_to_dict(column_list):
     Outputs:
         variant_dict (dict): a dictionary with each item in column_list as
         a key, and an empty string as the value
-    '''
+    """
     variant_dict = {}
     for col in column_list:
         variant_dict[col] = ""
@@ -20,28 +20,28 @@ def add_columns_to_dict(column_list):
 
 
 def get_gene_symbol(variant):
-    '''
+    """
     Get gene symbol from variant record. Some records will have more than
     one gene symbol; in those cases, all gene symbols will be returned.
     Inputs:
         variant (dict): record for that specific variant from the JSON
     Outputs:
         gene_symbol (str): the gene symbol for that variant
-    '''
+    """
     gene_list = []
-    for entry in variant['reportEvents'][0]['genomicEntities']:
-        if entry['type'] == 'gene':
-            gene_list.append(entry['geneSymbol'])
+    for entry in variant["reportEvents"][0]["genomicEntities"]:
+        if entry["type"] == "gene":
+            gene_list.append(entry["geneSymbol"])
     uniq_genes = sorted(list(set(gene_list)))
     if len(uniq_genes) == 1:
         gene_symbol = uniq_genes.pop()
     else:
-        gene_symbol = str(uniq_genes).strip('[').strip(']')
+        gene_symbol = str(uniq_genes).strip("[").strip("]")
     return gene_symbol
 
 
 def convert_tier(tier, var_type):
-    '''
+    """
     Convert tier from GEL tiering variant to include variant type. This is
     to facilitate counting the total variants of each tier and type, as
     well as to convert tier "A" to "1" for consistency.
@@ -52,7 +52,7 @@ def convert_tier(tier, var_type):
         tier (str): tier for that variant converted to include variant type
         to facilitate counting a total number of variants for each tier and
         type
-    '''
+    """
     if tier == "TIER1" and var_type == "SNV":
         tier = "TIER1_SNV"
     elif tier in ["TIER1", "TIERA"] and var_type == "CNV":
@@ -69,7 +69,7 @@ def convert_tier(tier, var_type):
 
 
 def get_af_max(variant):
-    '''
+    """
     Get AF for population with highest allele frequency in the JSON
     Inputs:
         variant (dict): dict describing a single variant from JSON
@@ -78,22 +78,22 @@ def get_af_max(variant):
         the highest allele frequency for the variant, or - if the variant
         is not seen in any populations in the JSON, or - if there are no
         reference populations.
-    '''
+    """
     highest_af = 0
-    if variant['variantAttributes']['alleleFrequencies'] is None:
-        highest_af = '-'
+    if variant["variantAttributes"]["alleleFrequencies"] is None:
+        highest_af = "-"
     else:
-        for af in variant['variantAttributes']['alleleFrequencies']:
-            if af['alternateFrequency'] > highest_af:
-                highest_af = af['alternateFrequency']
+        for af in variant["variantAttributes"]["alleleFrequencies"]:
+            if af["alternateFrequency"] > highest_af:
+                highest_af = af["alternateFrequency"]
         if highest_af == 0:
-            highest_af = '-'
+            highest_af = "-"
 
     return str(highest_af)
 
 
 def get_inheritance(variant, mother_idx, father_idx, p_sex):
-    '''
+    """
     Work out inheritance of variant based on zygosity of parents
     Inputs:
         variant: (dict): dict extracted from JSON describing single variant
@@ -104,28 +104,28 @@ def get_inheritance(variant, mother_idx, father_idx, p_sex):
         p_sex (str): proband sex
     Outputs:
         inheritance (str): inferred inheritance of the variant, or None.
-    '''
-    zygosity = lambda x, y: x['variantCalls'][y]['zygosity']
+    """
+    zygosity = lambda x, y: x["variantCalls"][y]["zygosity"]
 
     inheritance = None
     maternally_inherited = False
     paternally_inherited = False
 
-    inheritance_types = ['alternate_homozygous', 'heterozygous', 'hemizygous']
+    inheritance_types = ["alternate_homozygous", "heterozygous", "hemizygous"]
 
     # if there is a mother in the JSON and the variant is alt_homozygous in
     # or heterozygous in the mother then can infer maternal inheritance
-    if (mother_idx is not None and
-        zygosity(variant, mother_idx) in inheritance_types):
+    if mother_idx is not None and zygosity(variant, mother_idx) in inheritance_types:
         maternally_inherited = True
 
     # if there is a father in the JSON and the variant is alt_homozygous in
     # or heterozygous in the father then can infer paternal inheritance
     # filter out XY probands here as X should be inherited from mother
-    if (father_idx is not None and
-        zygosity(variant, father_idx) in inheritance_types and
-        not (p_sex == 'MALE' and
-        variant['variantCoordinates']['chromosome'] == 'X')):
+    if (
+        father_idx is not None
+        and zygosity(variant, father_idx) in inheritance_types
+        and not (p_sex == "MALE" and variant["variantCoordinates"]["chromosome"] == "X")
+    ):
         paternally_inherited = True
 
     if maternally_inherited and not paternally_inherited:
@@ -141,23 +141,21 @@ def get_inheritance(variant, mother_idx, father_idx, p_sex):
 
 
 def convert_moi(moi):
-    '''
+    """
     Convert MOI for SNV to use more human readable wording
     Inputs
         moi (str): ModeOfInheritance field from GEL JSON
     Outputs
         Converted ModeOfInheritance
-    '''
+    """
     conversion = {
         "biallelic": "Autosomal Recessive",
         "monoallelic_not_imprinted": "Autosomal Dominant",
-        "monoallelic_paternally_imprinted": "Autosomal Dominant - "
-        "Paternally Imprinted",
-        "monoallelic_maternally_imprinted": "Autosomal Dominant - "
-        "Maternally Imprinted",
+        "monoallelic_paternally_imprinted": "Autosomal Dominant - Paternally Imprinted",
+        "monoallelic_maternally_imprinted": "Autosomal Dominant - Maternally Imprinted",
         "xlinked_biallelic": "X-Linked Recessive",
         "xlinked_monoallelic": "X-Linked Dominant",
-        "mitochondrial": "Mitochondrial"
+        "mitochondrial": "Mitochondrial",
     }
 
     try:
@@ -172,7 +170,7 @@ def convert_moi(moi):
 
 
 def index_participant(variant, participant_id):
-    '''
+    """
     Take list of variantCalls for a variant and return index of the
     participant.
     Inputs:
@@ -180,12 +178,12 @@ def index_participant(variant, participant_id):
         participant_id (str): GEL ID for the participant
     Outputs:
         index (int): index of variantCalls list in dict for the participant
-    '''
+    """
     index = None
     if participant_id is not None:
-        for call in variant['variantCalls']:
-            if call['participantId'] == participant_id:
-                index = variant['variantCalls'].index(call)
+        for call in variant["variantCalls"]:
+            if call["participantId"] == participant_id:
+                index = variant["variantCalls"].index(call)
                 break
 
         if index is None:
@@ -198,7 +196,7 @@ def index_participant(variant, participant_id):
 
 
 def get_str_info(variant, proband, columns, ev_idx, pb_sex):
-    '''
+    """
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
     heading in the workbook
@@ -215,10 +213,10 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
         var_dict: (dict) dict of variant information extracted from JSON,
         formatted with the correct column headings for the excel workbook.
         this will be added to a list of dicts for conversion into dataframe
-    '''
-    num_copies = lambda x, y, z: x['variantCalls'][y]['numberOfCopies'][
-        z
-    ]['numberOfCopies']
+    """
+    num_copies = lambda x, y, z: x["variantCalls"][y]["numberOfCopies"][z][
+        "numberOfCopies"
+    ]
 
     var_dict = add_columns_to_dict(columns)
     pb_idx = index_participant(variant, proband)
@@ -227,12 +225,9 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
     var_dict["End"] = variant["coordinates"]["end"]
     var_dict["Length"] = abs(var_dict["End"] - var_dict["Pos"])
     var_dict["Type"] = "STR"
-    var_dict["Priority"] = convert_tier(
-        variant["reportEvents"][ev_idx]["tier"], "STR")
+    var_dict["Priority"] = convert_tier(variant["reportEvents"][ev_idx]["tier"], "STR")
 
-    var_dict["Repeat"] = variant[
-        "shortTandemRepeatReferenceData"
-    ]["repeatedSequence"]
+    var_dict["Repeat"] = variant["shortTandemRepeatReferenceData"]["repeatedSequence"]
     # Get the repeat number from the JSON for one allele
     var_dict["STR1"] = num_copies(variant, pb_idx, 0)
     # Get the repeat number from the JSON for the other allele
@@ -247,7 +242,7 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
 
 
 def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
-    '''
+    """
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
     heading in the workbook
@@ -267,7 +262,7 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
     Outputs:
         var_dict: (dict) dict of variant information extracted from JSON
         will be added to a list of dicts for conversion into dataframe.
-    '''
+    """
     var_dict = add_columns_to_dict(columns)
     mother_idx = index_participant(variant, mother)
     father_idx = index_participant(variant, father)
@@ -277,33 +272,26 @@ def get_snv_info(variant, pb, ev_idx, columns, mother, father, pb_sex):
     var_dict["Ref"] = variant["variantCoordinates"]["reference"]
     var_dict["Alt"] = variant["variantCoordinates"]["alternate"]
     var_dict["Type"] = "SNV"
-    var_dict["Priority"] = convert_tier(
-        variant["reportEvents"][ev_idx]["tier"], "SNV"
-    )
+    var_dict["Priority"] = convert_tier(variant["reportEvents"][ev_idx]["tier"], "SNV")
     var_dict["Zygosity"] = get_zygosity(
         zygosity=variant["variantCalls"][pb_idx]["zygosity"],
         p_sex=pb_sex,
-        chrom=var_dict["Chr"]
+        chrom=var_dict["Chr"],
     )
 
-    var_dict["Depth"] = variant["variantCalls"][pb_idx]['depthAlternate']
+    var_dict["Depth"] = variant["variantCalls"][pb_idx]["depthAlternate"]
     var_dict["Gene"] = get_gene_symbol(variant)
-    var_dict['AF Max'] = get_af_max(variant)
-    var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx][
-        "penetrance"
-    ]
+    var_dict["AF Max"] = get_af_max(variant)
+    var_dict["Penetrance filter"] = variant["reportEvents"][ev_idx]["penetrance"]
     var_dict["Panel MOI"] = convert_moi(
         variant["reportEvents"][ev_idx]["modeOfInheritance"]
     )
-    var_dict["Inheritance"] = (
-        get_inheritance(
-            variant, mother_idx, father_idx, pb_sex
-        )
-    )
+    var_dict["Inheritance"] = get_inheritance(variant, mother_idx, father_idx, pb_sex)
     return var_dict
 
+
 def get_zygosity(zygosity, p_sex, chrom):
-    '''
+    """
     Get the zygosity of the variant, and if the variant is heterozygous,
     on the X chromosome and the proband is male then set the
     zygosity to hemizygous.
@@ -316,18 +304,19 @@ def get_zygosity(zygosity, p_sex, chrom):
     Outputs:
         zygosity: (str) zygosity of the variant.
 
-    '''
+    """
 
-    if zygosity in ["heterozygous", "alternate_homozygous"] and \
-        p_sex == "MALE" and chrom == "X":
-
+    if (
+        zygosity in ["heterozygous", "alternate_homozygous"]
+        and p_sex == "MALE"
+        and chrom == "X"
+    ):
         zygosity = "hemizygous"
     return zygosity
 
 
-
 def get_cnv_info(variant, ev_index, columns):
-    '''
+    """
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
     heading in the workbook
@@ -343,7 +332,7 @@ def get_cnv_info(variant, ev_index, columns):
     Outputs:
         var_dict: (dict) dict of variant information extracted from JSON
         will be added to a list of dicts for conversion into dataframe.
-    '''
+    """
     var_dict = add_columns_to_dict(columns)
     var_dict["Chr"] = variant["coordinates"]["chromosome"]
     var_dict["Pos"] = variant["coordinates"]["start"]
@@ -353,16 +342,16 @@ def get_cnv_info(variant, ev_index, columns):
     var_dict["Priority"] = convert_tier(
         variant["reportEvents"][ev_index]["tier"], "CNV"
     )
-    var_dict["Copy Number"] = variant["variantCalls"][
-        0
-        ]['numberOfCopies'][0]['numberOfCopies']
+    var_dict["Copy Number"] = variant["variantCalls"][0]["numberOfCopies"][0][
+        "numberOfCopies"
+    ]
     var_dict["Gene"] = get_gene_symbol(variant)
-    var_dict['AF Max'] = get_af_max(variant)
+    var_dict["AF Max"] = get_af_max(variant)
     return var_dict
 
 
 def get_top_3_ranked(df):
-    '''
+    """
     Filter a df to return a df of the top 3 ranked Exomiser variants; this
     function uses a podium format so that equal ranks can be reported back.
     It will return all variants at each rank; so all the first ranked, all
@@ -373,28 +362,28 @@ def get_top_3_ranked(df):
     Outputs:
         df (pd.Dataframe): filtered variant dataframe containing only
         variants in the top three ranks
-    '''
+    """
     # First change "Exomiser Rank #" string to int
     # extracts the rank from "Exomiser Rank X" and ignores De novo if present
-    df['priority_as_int'] = df['Priority'].map(
-        lambda x: int(x.split(';')[0].split(' ')[-1]) if "Exomiser Rank" in x else None
+    df["priority_as_int"] = df["Priority"].map(
+        lambda x: int(x.split(";")[0].split(" ")[-1]) if "Exomiser Rank" in x else None
     )
 
     # Ignore variants without an Exomiser rank
-    df = df[df['priority_as_int'].notna()]
+    df = df[df["priority_as_int"].notna()]
 
     # Get unique ranks and sort, selecting the top three ranks
-    unique_ranks = df['priority_as_int'].unique()
+    unique_ranks = df["priority_as_int"].unique()
     top_3_ranks = sorted(unique_ranks)[:3]
 
     # filter the df to include only values in top three ranks
-    df = df[df['priority_as_int'].isin(top_3_ranks)]
-    df.drop(['priority_as_int'], axis=1, inplace=True)
+    df = df[df["priority_as_int"].isin(top_3_ranks)]
+    df.drop(["priority_as_int"], axis=1, inplace=True)
     return df
 
 
 def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
-    '''
+    """
     Search contents of a conversion file for a given ID. If a match is found,
     output the matched ID, else output None
         Inputs:
@@ -407,7 +396,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
             transcript or ENSP to get the corresponding protein ID
         Outputs:
             matched_id (str): Matched ID or None if no match found.
-    '''
+    """
     matched_id = None
     matches = []
     for line in conversion:
@@ -428,7 +417,7 @@ def look_up_id_in_refseq_mane_conversion_file(conversion, query_id, id_type):
 
 
 def get_hgvs_exomiser(variant, mane, refseq_tsv):
-    '''
+    """
     Exomiser variants have HGVS nomenclature for p dot and c dot provided
     in one field in the JSON in the following format:
     gene_symbol:ensembl_transcript_id:c_dot:p_dot
@@ -445,35 +434,35 @@ def get_hgvs_exomiser(variant, mane, refseq_tsv):
         transcript ID if there is no matched equivalent
         hgvs_p: (str) HGVS p dot (protein) nomenclature for the variant.
         this is annotated against the ensembl protein ID.
-    '''
+    """
     hgvs_c = None
     hgvs_p = None
-    hgvs_source = variant['variantAttributes'][
-        'additionalTextualVariantAnnotations'
-        ]['hgvs']
+    hgvs_source = variant["variantAttributes"]["additionalTextualVariantAnnotations"][
+        "hgvs"
+    ]
     # Try converting Ensembl transcript to get RefSeq MANE
     refseq = look_up_id_in_refseq_mane_conversion_file(
-        mane, hgvs_source.split(':')[1], "NM_"
+        mane, hgvs_source.split(":")[1], "NM_"
     )
 
     # If no MANE, return Ensembl transcript nomenclature
     if refseq is not None:
-        hgvs_c = refseq + ":" + hgvs_source.split(':')[2]
+        hgvs_c = refseq + ":" + hgvs_source.split(":")[2]
     else:
-        hgvs_c = hgvs_source.split(':')[1] + ':' + hgvs_source.split(':')[2]
+        hgvs_c = hgvs_source.split(":")[1] + ":" + hgvs_source.split(":")[2]
 
     # get equivalent ENSP to transcript and construct p dot equivalent.
     ensp = look_up_id_in_refseq_mane_conversion_file(
-        refseq_tsv, hgvs_source.split(':')[1].split('.')[0], "ENSP"
+        refseq_tsv, hgvs_source.split(":")[1].split(".")[0], "ENSP"
     )
     if ensp is not None:
-        hgvs_p = ensp + ':' + hgvs_source.split(':')[3]
+        hgvs_p = ensp + ":" + hgvs_source.split(":")[3]
 
     return hgvs_c, hgvs_p
 
 
 def get_hgvs_gel(variant, mane, refseq_tsv):
-    '''
+    """
     GEL variants store HGVS p dot and c dot nomenclature separately.
     This function extracts the cdot (with MANE refseq equivalent to
     ensembl transcript ID if found) and pdot (with ensembl protein ID)
@@ -487,23 +476,23 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
         transcript ID if there is no matched equivalent
         hgvs_p: (str) HGVS p dot (protein) nomenclature for the variant.
         this is annotated against the ensembl protein ID.
-    '''
+    """
     hgvs_p = None
     hgvs_c = None
     ref_list = []
     enst_list = []
-    cdnas = variant['variantAttributes']['cdnaChanges']
-    protein_changes = variant['variantAttributes']['proteinChanges']
+    cdnas = variant["variantAttributes"]["cdnaChanges"]
+    protein_changes = variant["variantAttributes"]["proteinChanges"]
 
     # Check for a MANE match
     for cdna in cdnas:
         refseq = look_up_id_in_refseq_mane_conversion_file(
-            mane, cdna.split('(')[0], "NM_"
+            mane, cdna.split("(")[0], "NM_"
         )
 
         if refseq is not None:
-            ref_list.append(refseq + cdna.split(')')[1])
-            enst_list.append(cdna.split('(')[0])
+            ref_list.append(refseq + cdna.split(")")[1])
+            enst_list.append(cdna.split("(")[0])
 
     # If no MANE match is found, return all transcripts
     if len(set(ref_list)) == 0:
@@ -513,11 +502,11 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
             hgvs_c_list.append(re.sub(r"\(.*?\)", "", cdna))
         for protein in protein_changes:
             ensp_list.append(protein)
-        hgvs_c = ', '.join(hgvs_c_list)
-        hgvs_p = ', '.join(ensp_list)
+        hgvs_c = ", ".join(hgvs_c_list)
+        hgvs_p = ", ".join(ensp_list)
 
     else:
-        hgvs_c = ', '.join(list(set(ref_list)))
+        hgvs_c = ", ".join(list(set(ref_list)))
         hgvs_p_list = []
         for enst in enst_list:
             ensp = look_up_id_in_refseq_mane_conversion_file(
@@ -527,6 +516,6 @@ def get_hgvs_gel(variant, mane, refseq_tsv):
                 for protein in protein_changes:
                     if ensp in protein:
                         hgvs_p_list.append(protein)
-        hgvs_p = ', '.join(hgvs_p_list)
+        hgvs_p = ", ".join(hgvs_p_list)
 
     return hgvs_c, hgvs_p
