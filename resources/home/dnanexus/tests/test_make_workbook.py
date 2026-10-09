@@ -511,6 +511,9 @@ class TestInterpretationService:
 
 
 class TestVariantInfo:
+    """
+    Test variant info functions.
+    """
     @pytest.fixture
     def mock_variant(self):
         variant = {
@@ -536,9 +539,6 @@ class TestVariantInfo:
         }
         return variant
 
-    """
-    Test variant info functions.
-    """
 
     def test_add_cols_to_dict(self):
         """
