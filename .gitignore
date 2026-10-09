@@ -1,3 +1,6 @@
 *.pyc
 *.xlsx
 settings.json
+.coverage
+coverage.xml
+htmlcov/

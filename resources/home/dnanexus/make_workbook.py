@@ -18,7 +18,7 @@ from openpyxl.styles import PatternFill
 from excel_styles import ExcelStyles, DropDown
 import get_variant_info as var_info
 
-DEFAULT_FONT.name = 'Calibri'
+DEFAULT_FONT.name = "Calibri"
 # row and col counts that are to be unlocked next to
 # populated table in all sheets if it is dias pipeline
 # required for 'lock_sheet' function
@@ -26,10 +26,11 @@ ROW_TO_UNLOCK = 500
 COL_TO_UNLOCK = 200
 
 
-class excel():
-    '''
+class excel:
+    """
     Functions to generate excel workbook of variants
-    '''
+    """
+
     def __init__(self, args) -> None:
         self.args = args
         self.wgs_data = None
@@ -59,8 +60,8 @@ class excel():
             "Length",
             "Ref",
             "Alt",
-            'STR1',
-            'STR2',
+            "STR1",
+            "STR2",
             "Repeat",
             "Copy Number",
             "Type",
@@ -74,7 +75,7 @@ class excel():
             "AF Max",
             "Penetrance filter",
             "Comment",
-            "Checker comment"
+            "Checker comment",
         ]
 
     def generate(self) -> None:
@@ -88,20 +89,20 @@ class excel():
         self.open_files()
         if self.args.output_filename is None:
             # Search for existing .xlsx files match family_id
-            existing_files = list(dxpy.find_data_objects(
-                name_mode="glob",
-                name=f"*{self.wgs_data['family_id']}*.xlsx",
-                project=project_id,
-                return_handler=True
-            ))
+            existing_files = list(
+                dxpy.find_data_objects(
+                    name_mode="glob",
+                    name=f"*{self.wgs_data['family_id']}*.xlsx",
+                    project=project_id,
+                    return_handler=True,
+                )
+            )
             # Set filename based on whether a match was found
             if existing_files:
                 self.args.output_filename = f"{self.wgs_data['family_id']}_2.xlsx"
             else:
                 self.args.output_filename = f"{self.wgs_data['family_id']}.xlsx"
-            self.writer = pd.ExcelWriter(
-                self.args.output_filename, engine='openpyxl'
-            )
+            self.writer = pd.ExcelWriter(self.args.output_filename, engine="openpyxl")
         self.workbook = self.writer.book
         print(f"Writing to {self.args.output_filename}...")
         # Write in workbook
@@ -113,28 +114,28 @@ class excel():
         self.str_image_page()
         self.writer.close()
         if self.args.acmg:
-            for i in range(1, self.args.acmg+1):
+            for i in range(1, self.args.acmg + 1):
                 self.write_snv_reporting_template(i)
         if self.args.cnv:
-            for i in range(1, self.args.cnv+1):
+            for i in range(1, self.args.cnv + 1):
                 self.write_cnv_reporting_template(i)
         self.workbook.save(self.args.output_filename)
         if self.args.acmg:
             DropDown.drop_down(self)
-        print('Done!')
+        print("Done!")
 
     def open_files(self):
-        '''
+        """
         Open input files and read into variables.
-        '''
+        """
         with open(self.args.json) as f:
             self.wgs_data = json.load(f)
 
         with gzip.open(self.args.mane_file) as f:
-            self.mane = [x.decode('utf8').strip() for x in f.readlines()]
+            self.mane = [x.decode("utf8").strip() for x in f.readlines()]
 
         with gzip.open(self.args.refseq_tsv) as f:
-            contents = [x.decode('utf8').strip() for x in f.readlines()]
+            contents = [x.decode("utf8").strip() for x in f.readlines()]
             self.refseq_tsv = [x for x in contents if "RefSeq_mRNA" in x]
 
         with open(self.args.config) as fh:
@@ -144,14 +145,14 @@ class excel():
             self.panels = json.load(f)
 
     def summary_page(self):
-        '''
+        """
         Add summary page. Create a page in the workbook to populate with
         details about the case and variants for interpretation.
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         summary_sheet = self.workbook.create_sheet("Summary")
 
         self.bold_content = {
@@ -218,27 +219,39 @@ class excel():
             summary_sheet.column_dimensions[col].width = 14
 
         row_ranges = {
-            'horizontal': [
-                'A36:C36', 'A35:B35', 'A39:C39', 'A33:B33', 'A35:B35',
-                'A35:B35'
+            "horizontal": [
+                "A36:C36",
+                "A35:B35",
+                "A39:C39",
+                "A33:B33",
+                "A35:B35",
+                "A35:B35",
             ],
-            'vertical': [
-                'A36:A38', 'B36:B38', 'C36:C38', 'D36:D38', 'A33:A35',
-                'B33:B35', 'C33:C35',
-            ]
+            "vertical": [
+                "A36:A38",
+                "B36:B38",
+                "C36:C38",
+                "D36:D38",
+                "A33:A35",
+                "B33:B35",
+                "C33:C35",
+            ],
         }
 
         ExcelStyles.borders(self, row_ranges, summary_sheet)
 
-    def get_summary_content(self,data):
-        req = data["interpretation_request_data"]['json_request']
+    def get_summary_content(self, data):
+        req = data["interpretation_request_data"]["json_request"]
 
         # Get flags from JSON, look for interpretation_flags and interpretationFlags
         key = next(
-            (k for k in req
-            if k.lower() == "interpretationflags"
-            or k.lower() == "interpretation_flags"),
-            None
+            (
+                k
+                for k in req
+                if k.lower() == "interpretationflags"
+                or k.lower() == "interpretation_flags"
+            ),
+            None,
         )
 
         flag_value = None
@@ -255,13 +268,10 @@ class excel():
             if val:  # non-empty
                 flag_value = val
                 break
-        return {
-            (1, 9): flag_value,
-            (1, 2): data["family_id"]
-        }
+        return {(1, 9): flag_value, (1, 2): data["family_id"]}
 
     def get_hpo_obo(self):
-        '''
+        """
         Select which version of HPO from the input config to use based on
         which version was used by GEL when the JSON was made.
         Inputs:
@@ -269,25 +279,22 @@ class excel():
         Outputs:
             None, downloads the HPO obo for the version of HPO used in the GEL
             JSON
-        '''
+        """
         # Get HPO version from JSON
         obo = None
-        version = self.wgs_data[
-                    "interpretation_request_data"
-                ]['json_request']["pedigree"][
-            "members"
-            ][0]["hpoTermList"][0]['hpoBuildNumber']
+        version = self.wgs_data["interpretation_request_data"]["json_request"][
+            "pedigree"
+        ]["members"][0]["hpoTermList"][0]["hpoBuildNumber"]
 
         # Find dx file ID in config for obo file for that version of HPO
-        for k, v in self.config['obos'].items():
+        for k, v in self.config["obos"].items():
             if k == version:
                 obo = v
 
         # If no match found error, else download the HPO obo + call it hpo.obo
         if obo is None:
             raise RuntimeError(
-                f"HPO version in JSON {version} not found in config\n"
-                f"{self.config}"
+                f"HPO version in JSON {version} not found in config\n{self.config}"
             )
 
         dxpy.download_dxfile(obo, "hpo.obo")
@@ -297,10 +304,10 @@ class excel():
         """Return HPO terms not marked as termPresence == 'unknown'."""
         if not hpo_terms:
             return []
-        return [t for t in hpo_terms if t.get('termPresence') != 'unknown']
+        return [t for t in hpo_terms if t.get("termPresence") != "unknown"]
 
     def get_hpo_terms(self, member):
-        '''
+        """
         Use obo hpo term ontology (.obo) file to convert HPO IDs to names.
         This file has been downloaded and named hpo.obo by get_hpo_obo
         Inputs:
@@ -308,7 +315,7 @@ class excel():
         Outputs:
             hpo_names (list): list of HPO names corresponding to HPO terms for
             that family member
-        '''
+        """
 
         hpo_terms = []
         hpo_names = []
@@ -321,18 +328,18 @@ class excel():
             # Convert term to name using obo file
             for term in hpo_terms:
                 hpo_dict = graph.nodes[term]
-                hpo_name = hpo_dict['name']
+                hpo_name = hpo_dict["name"]
                 if hpo_name != "unknown":
                     hpo_names.append(hpo_name)
 
-            hpo_names = '; '.join(hpo_names) if hpo_names else None
+            hpo_names = "; ".join(hpo_names) if hpo_names else None
         else:
             hpo_names = None
 
         return hpo_names
 
     def add_person_data_to_summary(self, member, index):
-        '''
+        """
         Function to add data that is added for all family members to the
         summary sheet. Isolated here as it is the same for all family members
         Inputs:
@@ -342,14 +349,14 @@ class excel():
             member
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         self.summary_content[(index, 2)] = member["participantId"]
         self.summary_content[(index, 5)] = member["sex"]
         self.summary_content[(index, 6)] = member["affectionStatus"]
         self.summary_content[(index, 7)] = self.get_hpo_terms(member)
 
     def person_data(self):
-        '''
+        """
         Find data for participants and add to summary sheet.
         This function will find the proband and add their affected status, HPO
         term names, participant ID, sample ID to the summary sheet
@@ -358,26 +365,23 @@ class excel():
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         # Get version of HPO to use for terms
         self.get_hpo_obo()
         pb_relate = lambda x: x["additionalInformation"]["relation_to_proband"]
 
-        for member in self.wgs_data[
-                    "interpretation_request_data"
-                ]['json_request']["pedigree"]["members"]:
-
+        for member in self.wgs_data["interpretation_request_data"]["json_request"][
+            "pedigree"
+        ]["members"]:
             # Ignore participants starting NR, as they have no sequence data
-            if member["participantId"].startswith('NR'):
+            if member["participantId"].startswith("NR"):
                 continue
 
             if member["isProband"]:
                 self.add_person_data_to_summary(member, 6)
                 self.proband = member["participantId"]
                 self.proband_sex = member["sex"]
-                self.summary_content[(10, 2)] = member["samples"][0][
-                    "sampleId"
-                ]
+                self.summary_content[(10, 2)] = member["samples"][0]["sampleId"]
 
             elif pb_relate(member) == "Mother":
                 self.add_person_data_to_summary(member, 7)
@@ -393,31 +397,30 @@ class excel():
                 self.other_relation = True
 
     def get_panels(self):
-        '''
+        """
         Function to get panels from JSON and add to summary content dict to
         then add to summary content sheet
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         indications = []
         row = 14
-        for panel in self.wgs_data[
-                "interpretation_request_data"
-            ]['json_request']['pedigree']['analysisPanels']:
-            indications.append(panel['specificDisease'])
+        for panel in self.wgs_data["interpretation_request_data"]["json_request"][
+            "pedigree"
+        ]["analysisPanels"]:
+            indications.append(panel["specificDisease"])
             # Add panel ID from GEL JSON
-            self.summary_content[(row, 1)] = panel['panelId']
+            self.summary_content[(row, 1)] = panel["panelId"]
 
             # If panel ID is in JSON, use this to add panel name + code
-            panel_details = self.panels.get(panel['panelId'])
+            panel_details = self.panels.get(panel["panelId"])
             if panel_details is not None:
-                panel_version = panel['panelVersion']
-                self.summary_content[(row, 2)] = panel_details.get('rcode')
+                panel_version = panel["panelVersion"]
+                self.summary_content[(row, 2)] = panel_details.get("rcode")
                 self.summary_content[(row, 3)] = (
-                    f"{panel_details.get('panel_name')} "
-                    f"({panel_version})"
+                    f"{panel_details.get('panel_name')} ({panel_version})"
                 )
 
             row += 1
@@ -425,28 +428,27 @@ class excel():
         # Add clinical indication content
         self.summary_content[(2, 2)] = ", ".join(set(indications))
 
-
     def get_penetrance(self):
-        '''
+        """
         Get penetrance info from JSON and add to summary content dict to
         then add to summary content sheet
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         p_list = []
-        for penetrance in self.wgs_data[
-                    "interpretation_request_data"
-                ]['json_request']['pedigree']['diseasePenetrances']:
-            p_list.append(penetrance['penetrance'])
+        for penetrance in self.wgs_data["interpretation_request_data"]["json_request"][
+            "pedigree"
+        ]["diseasePenetrances"]:
+            p_list.append(penetrance["penetrance"])
 
-        disease_penetrance = ', '.join(p_list)
+        disease_penetrance = ", ".join(p_list)
 
         self.summary_content[(3, 2)] = disease_penetrance
 
     def add_epic_data(self):
-        '''
+        """
         Read in data from Epic Clarity extract and add to summary page,
         This function assumes that in a case where there is a proband and
         parent(s), the youngest person is the proband, the older female is the
@@ -457,8 +459,8 @@ class excel():
             None, uses Epic clarity export
         Outputs:
             None, adds Epic data to Excel workbook.
-        '''
-        family_id = self.wgs_data['family_id']
+        """
+        family_id = self.wgs_data["family_id"]
         # Only run if there are only parents and proband
         if self.other_relation is False:
             required_cols = [
@@ -466,12 +468,11 @@ class excel():
                 "External Specimen Identifier",
                 "Specimen Identifier",
                 "Patient Stated Gender",
-                "Year of Birth"
+                "Year of Birth",
             ]
             # Read in csv as df, using only relevant columns
             df = pd.read_csv(
-                self.args.epic_clarity,
-                usecols=lambda x: x in required_cols
+                self.args.epic_clarity, usecols=lambda x: x in required_cols
             )
 
             # Check that required columns are present in Epic extract
@@ -482,13 +483,13 @@ class excel():
                     "EPIC Clarity extract is missing required column(s): "
                     f"{missing_columns}. Please amend extract, or run again "
                     "without it."
-                    )
+                )
 
             # Filter df to only have rows with the family ID for this case
-            fam_df = df.loc[df['WGS Referral ID'] == family_id]
+            fam_df = df.loc[df["WGS Referral ID"] == family_id]
 
             if not fam_df.empty:
-            # Use most recent year of birth to work out proband, then get IDs
+                # Use most recent year of birth to work out proband, then get IDs
                 pb_idx = fam_df["Year of Birth"].idxmax()
                 pb_age = fam_df["Year of Birth"].max()
                 pb_sp, pb_nuh = self.get_ids(fam_df, pb_idx)
@@ -519,7 +520,7 @@ class excel():
 
     @staticmethod
     def get_ids(df, row):
-        '''
+        """
         Get the SP number and NUH ID from a given row in the dataframe
         Inputs
             df: pandas dataframe of the family in the Epic clarity export
@@ -527,13 +528,13 @@ class excel():
         Outputs
             sp_number: Epic sample number
             nuh_id: External sample ID for NUH samples
-        '''
+        """
         sp_number = df.loc[row, "Specimen Identifier"]
         nuh_id = df.loc[row, "External Specimen Identifier"]
         return sp_number, nuh_id
 
     def get_parent_ids(self, pb_yob, df, sex):
-        '''
+        """
         Get the SP number and NUH ID for the parents, assuming that mother is
         female and older than the proband, and father is male and older than
         the proband
@@ -544,9 +545,9 @@ class excel():
         Outputs:
             p_sp: Epic sample number for the parent
             p_nuh: External sample ID for NUH samples for the parent
-        '''
+        """
         parent_df = df[
-            (df['Patient Stated Gender'] == sex) & (df['Year of Birth'] < pb_yob)
+            (df["Patient Stated Gender"] == sex) & (df["Year of Birth"] < pb_yob)
         ]
         if parent_df.empty:
             p_sp = None
@@ -557,7 +558,7 @@ class excel():
         return p_sp, p_nuh
 
     def get_interpreted_genome_format(self):
-        '''
+        """
         There are two versions of the formatting for interpreted genomes fields
         one is interpretedGenomes > interpretedGenomeData and the other is
         interpreted_genome > interpreted_genome_data. This function finds out
@@ -567,13 +568,13 @@ class excel():
         Outputs:
             None, sets self.genome_format and self.genome_data_format for use
             in creating variant pages
-        '''
-        if self.wgs_data.get('interpretedGenomes') is not None:
-            self.genome_format = 'interpretedGenomes'
-            self.genome_data_format = 'interpretedGenomeData'
-        elif self.wgs_data.get('interpreted_genome') is not None:
-            self.genome_format = 'interpreted_genome'
-            self.genome_data_format = 'interpreted_genome_data'
+        """
+        if self.wgs_data.get("interpretedGenomes") is not None:
+            self.genome_format = "interpretedGenomes"
+            self.genome_data_format = "interpretedGenomeData"
+        elif self.wgs_data.get("interpreted_genome") is not None:
+            self.genome_format = "interpreted_genome"
+            self.genome_data_format = "interpreted_genome_data"
         else:
             raise RuntimeError(
                 "JSON does not have interpreted_genome or interpretedGenomes "
@@ -581,7 +582,7 @@ class excel():
             )
 
     def index_interpretation_services(self):
-        '''
+        """
         The JSON contains two interpretation services: GEL tiering and Exomiser
         This function finds the index for each so these can be referred to
         correctly and sets self.gel_index to the index for the GEL tiering and
@@ -590,20 +591,20 @@ class excel():
             None
         Outputs:
             None, sets indexs for GEL tiering and exomiser in the JSON.
-        '''
+        """
         for interpretation in self.wgs_data[self.genome_format]:
-            if interpretation[self.genome_data_format][
-                'interpretationService'
-                ] == 'genomics_england_tiering':
-                self.gel_index = self.wgs_data[
-                    self.genome_format
-                    ].index(interpretation)
-            elif str(interpretation[self.genome_data_format][
-                'interpretationService'
-                ]).lower() == 'exomiser':
-                self.ex_index = self.wgs_data[
-                    self.genome_format
-                    ].index(interpretation)
+            if (
+                interpretation[self.genome_data_format]["interpretationService"]
+                == "genomics_england_tiering"
+            ):
+                self.gel_index = self.wgs_data[self.genome_format].index(interpretation)
+            elif (
+                str(
+                    interpretation[self.genome_data_format]["interpretationService"]
+                ).lower()
+                == "exomiser"
+            ):
+                self.ex_index = self.wgs_data[self.genome_format].index(interpretation)
             else:
                 raise RuntimeError(
                     "Interpretation services in JSON not recognised as "
@@ -611,42 +612,68 @@ class excel():
                 )
 
     def str_image_page(self):
-        '''
+        """
         STR table is useful for interpretation, so will be included on a sheet
-        so it can be referred to during interpretation.
+        so it can be referred to during interpretation. Also adds STRs underneath
+        the guidelines for interpretation.
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
-        str_sheet = self.workbook.create_sheet("STR guidelines")
+        """
+
+        str_list = []
+
+        # STRs
+        for s_t_r in self.wgs_data[self.genome_format][self.gel_index][
+            self.genome_data_format
+        ]["shortTandemRepeats"]:
+            for event in s_t_r["reportEvents"]:
+                event_index = s_t_r["reportEvents"].index(event)
+                var_dict = var_info.get_str_info(
+                    s_t_r, self.proband, self.column_list, event_index, self.proband_sex
+                )
+                str_list.append(var_dict)
+
+        # Add all variants into dataframe
+        self.str_df = pd.DataFrame(str_list)
+        self.str_df = self.str_df.drop_duplicates()
+
+        self.str_df.to_excel(
+            self.writer, sheet_name="STR guidelines", index=False, startrow=60
+        )
+
+        # Set column widths
+        ExcelStyles.resize_variant_columns(self, self.workbook["STR guidelines"])
+
+        str_sheet = self.workbook["STR guidelines"]
         script_dir = os.path.dirname(__file__)
         img_folder = "images/str_table.png"
         img_path = os.path.join(script_dir, img_folder)
         img = openpyxl.drawing.image.Image(img_path)
-        img.anchor = 'B4'
+        img.anchor = "B4"
         str_sheet.add_image(img)
-        str_sheet['B2'] = (
+        str_sheet["B2"] = (
             "From CU-WG-REF-40 Guidelines for Rare Disease Whole Genome "
             "Sequencing & Next Generation Sequencing Panel Interpretation & "
             "Reporting"
         )
 
     def create_gel_tiering_variant_page(self):
-        '''
+        """
         Take variants from GEL tiering JSON and format into sheet in Excel
         workbook.
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         variant_list = []
 
         # SNVs
-        for snv in self.wgs_data[self.genome_format][
-            self.gel_index
-            ][self.genome_data_format]["variants"]:
+        for snv in self.wgs_data[self.genome_format][self.gel_index][
+            self.genome_data_format
+        ]["variants"]:
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
@@ -657,82 +684,86 @@ class excel():
                         self.column_list,
                         self.mother,
                         self.father,
-                        self.proband_sex
-                        )
+                        self.proband_sex,
+                    )
                     var_dict = self._normalise_zygosity(var_dict)
                     c_dot, p_dot = var_info.get_hgvs_gel(
-                        snv,
-                        self.mane,
-                        self.refseq_tsv
-                        )
+                        snv, self.mane, self.refseq_tsv
+                    )
                     var_dict["HGVSc"] = c_dot
                     var_dict["HGVSp"] = p_dot
                     variant_list.append(var_dict)
 
         # STRs
-        for s_t_r in self.wgs_data[self.genome_format][
-            self.gel_index
-            ][self.genome_data_format][
-                "shortTandemRepeats"
-            ]:
+        for s_t_r in self.wgs_data[self.genome_format][self.gel_index][
+            self.genome_data_format
+        ]["shortTandemRepeats"]:
             for event in s_t_r["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = s_t_r["reportEvents"].index(event)
                     var_dict = var_info.get_str_info(
-                        s_t_r, self.proband, self.column_list, event_index, self.proband_sex
+                        s_t_r,
+                        self.proband,
+                        self.column_list,
+                        event_index,
+                        self.proband_sex,
                     )
                     variant_list.append(var_dict)
 
         # CNVs
-        for cnv in self.wgs_data[self.genome_format][
-            self.gel_index
-            ][self.genome_data_format]["structuralVariants"]:
+        for cnv in self.wgs_data[self.genome_format][self.gel_index][
+            self.genome_data_format
+        ]["structuralVariants"]:
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
                 # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B
                 # GEL updated the nomenclature in 2024
                 if cnv["reportEvents"][event_index]["tier"] in [
-                    "TIER1", "TIERA", "TIER2", "TIERB"
-                    ]:
-                    var_dict = var_info.get_cnv_info(
-                        cnv, event_index, self.column_list
-                    )
+                    "TIER1",
+                    "TIERA",
+                    "TIER2",
+                    "TIERB",
+                ]:
+                    var_dict = var_info.get_cnv_info(cnv, event_index, self.column_list)
                     variant_list.append(var_dict)
 
         # Add all variants into dataframe
         self.var_df = pd.DataFrame(variant_list)
         self.var_df = self.var_df.drop_duplicates()
 
+        # pd.DataFrame([]) has no columns, so if there are no variants,
+        # force the expected columns so headers still get written below
+        if self.var_df.empty:
+            self.var_df = pd.DataFrame(columns=self.column_list)
+
         # Prepare to add counts to summary sheet
         summary_sheet = self.workbook["Summary"]
         count_dict = {
-            'B22': "TIER1_SNV",
-            'B23': "TIER2_SNV",
-            'B25': "TIER1_CNV",
-            'B26': "TIER2_CNV",
-            'B27': "TIER1_STR",
-            'B28': "TIER2_STR",
+            "B22": "TIER1_SNV",
+            "B23": "TIER2_SNV",
+            "B25": "TIER1_CNV",
+            "B26": "TIER2_CNV",
+            "B27": "TIER1_STR",
+            "B28": "TIER2_STR",
         }
 
         # if df is not empty, sort and add counts of each variant type to
         # summary sheet
         if not self.var_df.empty:
-            self.var_df['Depth'] = self.var_df['Depth'].astype(object)
+            self.var_df["Depth"] = self.var_df["Depth"].astype(object)
 
             # if variant is in both Tier 1 and Tier 2, keep Tier 1 entry only
-            self.var_df = self.var_df.sort_values(
-                by=['Priority']
-                ).drop_duplicates(subset=['Chr', 'Pos', 'Ref', 'Alt', 'End'])
+            self.var_df = self.var_df.sort_values(by=["Priority"]).drop_duplicates(
+                subset=["Chr", "Pos", "Ref", "Alt", "End"]
+            )
 
             # Sort by Priority and then Gene symbol
-            self.var_df = self.var_df.sort_values(['Priority', 'Gene'])
+            self.var_df = self.var_df.sort_values(["Priority", "Gene"])
 
             # Add variant counts to summary sheet
             for key, val in count_dict.items():
                 if val in self.var_df.Priority.values:
-                    summary_sheet[key] = self.var_df[
-                        'Priority'
-                    ].value_counts()[val]
+                    summary_sheet[key] = self.var_df["Priority"].value_counts()[val]
                 else:
                     summary_sheet[key] = 0
 
@@ -741,9 +772,8 @@ class excel():
             for cell in count_dict.keys():
                 summary_sheet[cell] = 0
 
-        self.var_df.to_excel(
-            self.writer, sheet_name="Variants", index=False
-        )
+        # Write variant dataframe to workbook
+        self.var_df.to_excel(self.writer, sheet_name="Variants", index=False)
 
         # Set column widths
         ExcelStyles.resize_variant_columns(self, self.workbook["Variants"])
@@ -754,13 +784,14 @@ class excel():
         return var_dict
 
     def create_additional_analysis_page(self):
-        '''
+        """
         Get Tier3/Null SNVs for Exomiser/deNovo analysis
         Inputs:
             None
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
+
         def get_mt_gel_tier(chr_, pos, ref, alt):
             """
             Helper function to look up the highest GEL tier for a mitochondrial variant.
@@ -773,22 +804,24 @@ class excel():
             Outputs:
                 tier (int or None): Highest clinical GEL tier for the variant, or None if not found
             """
-            gel_variants = self.wgs_data[self.genome_format][self.gel_index][self.genome_data_format]["variants"]
+            gel_variants = self.wgs_data[self.genome_format][self.gel_index][
+                self.genome_data_format
+            ]["variants"]
 
             tier_nums = []
             for gel_snv in gel_variants:
                 coords = gel_snv.get("variantCoordinates", {})
                 if (
-                    str(coords.get("chromosome")) == str(chr_) and
-                    str(coords.get("position")) == str(pos) and
-                    str(coords.get("reference")) == str(ref) and
-                    str(coords.get("alternate")) == str(alt)
+                    str(coords.get("chromosome")) == str(chr_)
+                    and str(coords.get("position")) == str(pos)
+                    and str(coords.get("reference")) == str(ref)
+                    and str(coords.get("alternate")) == str(alt)
                 ):
                     for event in gel_snv["reportEvents"]:
                         tier_str = event.get("tier")
                         if tier_str is not None:
                             # Extract numeric tier (e.g. "TIER3" -> 3)
-                            match = re.search(r'\d+', tier_str)
+                            match = re.search(r"\d+", tier_str)
                             if match:
                                 tier_nums.append(int(match.group()))
 
@@ -799,9 +832,9 @@ class excel():
         ranked = []
         # Look through Exomiser SNVs and return those that are ranked
         # 1, 2, or 3 and have a score >= 0.75
-        for snv in self.wgs_data[self.genome_format][
-                self.ex_index
-            ][self.genome_data_format]["variants"]:
+        for snv in self.wgs_data[self.genome_format][self.ex_index][
+            self.genome_data_format
+        ]["variants"]:
             ev_to_look_at = []
 
             # Get chr, pos, ref, alt for use in MT GEL tier lookup
@@ -811,10 +844,11 @@ class excel():
             ref = coords.get("reference")
             alt = coords.get("alternate")
 
-
             # If MT GEL variant not found, skip to next variant
             if None in [chr_, pos, ref, alt]:
-                raise ValueError("Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)")
+                raise ValueError(
+                    "Exomiser SNV missing required coordinates: (chromosome/position/ref/alt)"
+                )
 
             is_mt = str(chr_) == "MT"
 
@@ -835,22 +869,22 @@ class excel():
             # ranked event from this list + set it as the only report event
             # for that SNV (we do not need the other events now)
             if ev_to_look_at:
-                top_event = min(ev_to_look_at, key=lambda x:
-                    x['vendorSpecificScores']['rank']
+                top_event = min(
+                    ev_to_look_at, key=lambda x: x["vendorSpecificScores"]["rank"]
                 )
-                snv['reportEvents'] = [top_event]
+                snv["reportEvents"] = [top_event]
                 ranked.append(snv)
 
         # We only want Exomiser variants with a score >= 0.75, so we need to
         # filter the list to keep only these
         ranked_and_above_threshold = [
-            x for x in ranked if x['reportEvents'][0]['score'] >= 0.75
+            x for x in ranked if x["reportEvents"][0]["score"] >= 0.75
         ]
 
         for snv in ranked_and_above_threshold:
             # put reportevents dict within a list to allow it to have an index
-            if isinstance(snv['reportEvents'], dict):
-                snv['reportEvents'] = [snv['reportEvents']]
+            if isinstance(snv["reportEvents"], dict):
+                snv["reportEvents"] = [snv["reportEvents"]]
             # event index will always be 0 as we have made it so there is only
             # the top ranked event
             event_index = 0
@@ -861,20 +895,17 @@ class excel():
                 self.column_list,
                 self.mother,
                 self.father,
-                self.proband_sex
+                self.proband_sex,
             )
-            rank = int(snv['reportEvents'][0]['vendorSpecificScores']['rank'])
+            rank = int(snv["reportEvents"][0]["vendorSpecificScores"]["rank"])
             var_dict["Priority"] = f"Exomiser Rank {rank}"
-            var_dict["HGVSc"], var_dict["HGVSp"] = (
-                var_info.get_hgvs_exomiser(
-                    snv,
-                    self.mane,
-                    self.refseq_tsv)
-                )
+            var_dict["HGVSc"], var_dict["HGVSp"] = var_info.get_hgvs_exomiser(
+                snv, self.mane, self.refseq_tsv
+            )
             # Normalise Exomiser/MT zygosity
             var_dict = self._normalise_zygosity(var_dict)
             # Add de novo status for Exomiser variants if both are found for the variant
-            if snv['reportEvents'][0].get('segregationPattern') == 'deNovo':
+            if snv["reportEvents"][0].get("segregationPattern") == "deNovo":
                 var_dict["Priority"] += "; De novo"
 
             var_dict.pop("Tier", None)
@@ -884,11 +915,11 @@ class excel():
         # Get variants with high de novo quality score (these are either SNVs
         # or indels). These variants only appear in the JSON if the quality
         # score is above the threshold
-        for snv in self.wgs_data[self.genome_format][
-                self.gel_index
-            ][self.genome_data_format]["variants"]:
+        for snv in self.wgs_data[self.genome_format][self.gel_index][
+            self.genome_data_format
+        ]["variants"]:
             for event in snv["reportEvents"]:
-                if event['segregationPattern'] == 'deNovo':
+                if event["segregationPattern"] == "deNovo":
                     event_index = snv["reportEvents"].index(event)
                     var_dict = var_info.get_snv_info(
                         snv,
@@ -897,18 +928,15 @@ class excel():
                         self.column_list,
                         self.mother,
                         self.father,
-                        self.proband_sex
+                        self.proband_sex,
                     )
                     if var_dict.get("Priority"):
                         var_dict["Priority"] += "; De novo"
                     else:
                         var_dict["Priority"] = "De novo"
                     var_dict["Inheritance"] = "De novo"
-                    var_dict["HGVSc"], var_dict["HGVSp"] = (
-                        var_info.get_hgvs_gel(
-                            snv,
-                            self.mane,
-                            self.refseq_tsv)
+                    var_dict["HGVSc"], var_dict["HGVSp"] = var_info.get_hgvs_gel(
+                        snv, self.mane, self.refseq_tsv
                     )
                     # Normalise zygosity (e.g. alternate_homozygous to homozygous)
                     var_dict = self._normalise_zygosity(var_dict)
@@ -919,7 +947,7 @@ class excel():
                             r"TIER\d+[A-Z]?",
                             "",
                             var_dict["Priority"],
-                            flags=re.IGNORECASE
+                            flags=re.IGNORECASE,
                         ).strip(" ;")
 
                     # Remove GEL tier
@@ -931,122 +959,134 @@ class excel():
         ex_df = pd.DataFrame(variant_list)
         ex_df = ex_df.drop_duplicates()
 
-        if not ex_df.empty and not self.var_df.empty:
-            # Convert all df columns to object type to allow merging without
-            # conflicts
-            ex_df = ex_df.astype(object)
-            self.var_df = self.var_df.astype(object)
-            merge_df = ex_df.merge(
-                self.var_df,
-                on=["Chr", 'Pos', 'Ref', 'Alt'],
-                how='left',
-                indicator=True,
-                suffixes=[None, "_y"]
-            )
-            # Remove duplicate columns created by merge
-            merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
-            # Remove any GEL Tier columns
-            merge_df = merge_df.drop(columns=[c for c in merge_df.columns if c.lower() == "tier"], errors="ignore")
+        if not ex_df.empty:
+            if not self.var_df.empty:
+                # Convert all df columns to object type to allow merging without
+                # conflicts
+                ex_df = ex_df.astype(object)
+                self.var_df = self.var_df.astype(object)
+                merge_df = ex_df.merge(
+                    self.var_df,
+                    on=["Chr", "Pos", "Ref", "Alt"],
+                    how="left",
+                    indicator=True,
+                    suffixes=[None, "_y"],
+                )
+                # Remove duplicate columns created by merge
+                merge_df = merge_df.loc[:, ~merge_df.columns.duplicated()]
+                # Remove any GEL Tier columns
+                merge_df = merge_df.drop(
+                    columns=[c for c in merge_df.columns if c.lower() == "tier"],
+                    errors="ignore",
+                )
 
-            merge_df = merge_df[merge_df['_merge'] == 'left_only']
-            # Reset index after filtering
-            merge_df = merge_df.reset_index(drop=True)
-            # Drop merge column
-            merge_df = merge_df.drop(columns=['_merge'])
-            # Reset index again
-            merge_df = merge_df.reset_index(drop=True)
+                merge_df = merge_df[merge_df["_merge"] == "left_only"]
+                # Reset index after filtering
+                merge_df = merge_df.reset_index(drop=True)
+                # Drop merge column
+                merge_df = merge_df.drop(columns=["_merge"])
+                # Reset index again
+                merge_df = merge_df.reset_index(drop=True)
 
-            # Now apply the Tier/Tier_y filtering
-            if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
+                # Now apply the Tier/Tier_y filtering
+                if "Tier" in merge_df.columns and "Tier_y" in merge_df.columns:
+                    # Collapse duplicate Tier_y columns if merge created more than one
+                    if isinstance(merge_df["Tier_y"], pd.DataFrame):
+                        merge_df["Tier_y"] = merge_df["Tier_y"].iloc[:, 0]
 
-                # Collapse duplicate Tier_y columns if merge created more than one
-                if isinstance(merge_df["Tier_y"], pd.DataFrame):
-                    merge_df["Tier_y"] = merge_df["Tier_y"].iloc[:, 0]
+                    # Normalize None to pd.NA to make sure proper isna() filtering is done
+                    merge_df["Tier"] = merge_df["Tier"].replace({None: pd.NA})
+                    merge_df["Tier_y"] = merge_df["Tier_y"].replace({None: pd.NA})
 
-                # Normalize None to pd.NA to make sure proper isna() filtering is done
-                merge_df["Tier"] = merge_df["Tier"].replace({None: pd.NA})
-                merge_df["Tier_y"] = merge_df["Tier_y"].replace({None: pd.NA})
+                    # Filter out MT variants where Tier and Tier_y are missing
+                    merge_df = merge_df[
+                        ~(
+                            (merge_df["Chr"] == "MT")
+                            & merge_df["Tier"].isna()
+                            & merge_df["Tier_y"].isna()
+                        )
+                    ]
 
-                # Filter out MT variants where Tier and Tier_y are missing
-                merge_df = merge_df[
-                    ~(
-                        (merge_df['Chr'] == 'MT') &
-                        merge_df['Tier'].isna() &
-                        merge_df['Tier_y'].isna()
-                    )
-                ]
+                # Keep left only == keep only those that are in exomiser df and
+                # not in tiered df
+                # Clean up df by dropping merge column and columns ending _y
+                cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
+                ex_df = merge_df.drop(columns=cols_to_drop)
 
-            # Keep left only == keep only those that are in exomiser df and
-            # not in tiered df
-            # Clean up df by dropping merge column and columns ending _y
-            cols_to_drop = [c for c in merge_df.columns if c.endswith("_y")]
-            ex_df = merge_df.drop(columns=cols_to_drop)
+            # If var_df is empty, we can just use ex_df as is, but we still need to filter out MT variants with no GEL tier
+            else:
+                if "Tier" in ex_df.columns:
+                    ex_df = ex_df[~((ex_df["Chr"] == "MT") & ex_df["Tier"].isna())]
 
             if not ex_df.empty:
                 # Separate de novo and exomiser variants using case insensitive match
-                denovo_df = ex_df[ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
-                exomiser_df = ex_df[~ex_df['Priority'].str.contains("de novo", case=False, na=False)].copy()
+                denovo_df = ex_df[
+                    ex_df["Priority"].str.contains("de novo", case=False, na=False)
+                ].copy()
+                exomiser_df = ex_df[
+                    ~ex_df["Priority"].str.contains("de novo", case=False, na=False)
+                ].copy()
                 # Append de novo to priority for de novo variants so can be added to summary sheet
                 # Append "; De novo" to Exomiser rows that have a matching de novo variant
                 exomiser_df.loc[
-                    exomiser_df.set_index(['Chr','Pos','Ref','Alt']).index
-                    .isin(denovo_df.set_index(['Chr','Pos','Ref','Alt']).index),
-                    'Priority'
+                    exomiser_df.set_index(["Chr", "Pos", "Ref", "Alt"]).index.isin(
+                        denovo_df.set_index(["Chr", "Pos", "Ref", "Alt"]).index
+                    ),
+                    "Priority",
                 ] += "; De novo"
-
 
                 if not exomiser_df.empty:
                     exomiser_df = var_info.get_top_3_ranked(exomiser_df)
                     # Convert to str for comparison
-                    for col in ['Chr', 'Pos', 'Ref', 'Alt']:
-                        denovo_df[col] = denovo_df[col].astype(str).str.strip().str.upper()
-                        exomiser_df[col] = exomiser_df[col].astype(str).str.strip().str.upper()
+                    for col in ["Chr", "Pos", "Ref", "Alt"]:
+                        denovo_df[col] = (
+                            denovo_df[col].astype(str).str.strip().str.upper()
+                        )
+                        exomiser_df[col] = (
+                            exomiser_df[col].astype(str).str.strip().str.upper()
+                        )
                     # Remove duplicates from denovo_df that match exomiser_df
                     merged = pd.merge(
                         denovo_df,
-                        exomiser_df[['Chr', 'Pos', 'Ref', 'Alt']],
-                        on=['Chr', 'Pos', 'Ref', 'Alt'],
-                        how='left',
-                        indicator=True
+                        exomiser_df[["Chr", "Pos", "Ref", "Alt"]],
+                        on=["Chr", "Pos", "Ref", "Alt"],
+                        how="left",
+                        indicator=True,
                     )
-                    denovo_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+                    denovo_df = merged[merged["_merge"] == "left_only"].drop(
+                        columns=["_merge"]
+                    )
                 self.denovo_df = denovo_df.copy()
 
                 # Combine filtered de novo and exomiser variants
                 ex_df = pd.concat([exomiser_df, denovo_df], ignore_index=True)
-                ex_df = ex_df.sort_values(['Priority', 'Gene'])
+                ex_df = ex_df.sort_values(["Priority", "Gene"])
 
-        ex_df.to_excel(
-            self.writer,
-            sheet_name="Extended_analysis",
-            index=False
-        )
+        ex_df.to_excel(self.writer, sheet_name="Extended_analysis", index=False)
 
-        ExcelStyles.resize_variant_columns(
-            self, self.workbook["Extended_analysis"]
-        )
+        ExcelStyles.resize_variant_columns(self, self.workbook["Extended_analysis"])
 
         # Add exomiser/de novo variant counts to summary sheet
         summary_sheet = self.workbook["Summary"]
-        if 'Priority' in ex_df.columns:
-            summary_sheet['B31'] = ex_df['Priority'].str.contains(
-                r'\bde novo\b', case=False, na=False
-            ).sum()
-            summary_sheet['B30'] = ex_df['Priority'].str.startswith(
-                'Exomiser'
-            ).sum()
+        if "Priority" in ex_df.columns:
+            summary_sheet["B31"] = (
+                ex_df["Priority"]
+                .str.contains(r"\bde novo\b", case=False, na=False)
+                .sum()
+            )
+            summary_sheet["B30"] = ex_df["Priority"].str.startswith("Exomiser").sum()
 
     def write_cnv_reporting_template(self, cnv_sheet_num):
-        '''
+        """
         Write CNV reporting template to sheet(s) in the workbook.
         Inputs:
             cnv_sheet_num (int): number to append to CNV title
         Outputs:
             None, adds content to openpxyl workbook
-        '''
+        """
         cnv = self.workbook.create_sheet(f"cnv_interpret_{cnv_sheet_num}")
         titles = {
-            "Intragenic CNVs should be analysed using SNV guidelines": [1,2],
+            "Intragenic CNVs should be analysed using SNV guidelines": [1, 2],
             "Chromosomal region/gene": [3, 2],
             "Start": [3, 3],
             "Stop": [3, 4],
@@ -1064,17 +1104,17 @@ class excel():
         }
 
         content = {
-            "Does the CNV contain protein coding genes? How many?": [8,2],
-            "OMIM/green genes?": [9,2],
-            "Any disease genes relevant to phenotype?": [10,2],
-            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12,2],
+            "Does the CNV contain protein coding genes? How many?": [8, 2],
+            "OMIM/green genes?": [9, 2],
+            "Any disease genes relevant to phenotype?": [10, 2],
+            "Are similar CNVs in the gnomAD-SV database? Or in DGV?": [12, 2],
             "Does this CNV overlap with a known microdeletion or "
             "microduplication syndrome? Check decipher, pubmed, new "
-            "ACMG CNV guidelines Table S3": [14,2],
+            "ACMG CNV guidelines Table S3": [14, 2],
             "Similar CNVs in HGMD, decipher, pubmed listed as pathogenic?"
             "Are they de novo? Do they segregate with disease in the reported"
             "family?": [16, 2],
-            "Does gene of interest have evidence of HI/TS?": [17,2],
+            "Does gene of interest have evidence of HI/TS?": [17, 2],
             "In this case is the CNV de novo, inherited, unknown? Good "
             "phenotype fit? Non-segregation in affected family"
             "members?": [19, 2],
@@ -1086,73 +1126,87 @@ class excel():
             "5A-5H": [18, 7],
             "CNV pathogenicity calculators:": [2, 9],
             "Loss:": [3, 9],
-            "Gain:": [4, 9]
+            "Gain:": [4, 9],
         }
         for key, val in titles.items():
             cnv.cell(val[0], val[1]).value = key
-            cnv.cell(val[0], val[1]).font = Font(
-                bold=True, name=DEFAULT_FONT.name
-            )
+            cnv.cell(val[0], val[1]).font = Font(bold=True, name=DEFAULT_FONT.name)
 
         for key, val in content.items():
             cnv.cell(val[0], val[1]).value = key
 
         # Add pathogenicity calculator links
-        cnv['J3'].hyperlink = "https://cnvcalc.clinicalgenome.org/cnvcalc/"\
-            "cnv-loss"
-        cnv['J4'].hyperlink = "https://cnvcalc.clinicalgenome.org/cnvcalc/"\
-            "cnv-gain"
+        cnv["J3"].hyperlink = "https://cnvcalc.clinicalgenome.org/cnvcalc/cnv-loss"
+        cnv["J4"].hyperlink = "https://cnvcalc.clinicalgenome.org/cnvcalc/cnv-gain"
 
-        cnv.column_dimensions['B'].width = 35
-        cnv.column_dimensions['G'].width = 20
-        cnv.column_dimensions['H'].width = 20
-        for col in ['C', 'D', 'E', 'F']:
+        cnv.column_dimensions["B"].width = 35
+        cnv.column_dimensions["G"].width = 20
+        cnv.column_dimensions["H"].width = 20
+        for col in ["C", "D", "E", "F"]:
             cnv.column_dimensions[col].width = 15
 
         for i in [8, 9, 10, 12, 14, 16, 17, 19]:
             cnv.row_dimensions[i].height = 60
-            cnv[f"B{i}"].alignment = Alignment(
-                        wrapText=True, vertical="center"
-                )
+            cnv[f"B{i}"].alignment = Alignment(wrapText=True, vertical="center")
         cnv.row_dimensions[9].height = 15
 
         # merge evidence cells
         merge_dict = {7: 10, 11: 12, 13: 14, 15: 16, 18: 19}
         for start, end in merge_dict.items():
-            cnv.merge_cells(range_string=f'G{start}:G{end}')
+            cnv.merge_cells(range_string=f"G{start}:G{end}")
 
         for row in range(6, 20):
-            cnv.merge_cells(
-                start_row=row, end_row=row, start_column=3, end_column=6)
+            cnv.merge_cells(start_row=row, end_row=row, start_column=3, end_column=6)
 
         # define which rows should have borders
         row_ranges = {
-            'horizontal': [
-                'B3:D3', 'B4:F4', 'B6:H6', 'B7:H7', 'B8:H8', 'B9:H9',
-                'B10:H10', 'B11:H11',
-                'B12:H12', 'B13:H13', 'B14:H14', 'B15:H15', 'B16:H16',
-                'B17:H17', 'B18:H18', 'B19:H19', 'B20:H20',
+            "horizontal": [
+                "B3:D3",
+                "B4:F4",
+                "B6:H6",
+                "B7:H7",
+                "B8:H8",
+                "B9:H9",
+                "B10:H10",
+                "B11:H11",
+                "B12:H12",
+                "B13:H13",
+                "B14:H14",
+                "B15:H15",
+                "B16:H16",
+                "B17:H17",
+                "B18:H18",
+                "B19:H19",
+                "B20:H20",
             ],
-            'horizontal_thick': [
-                'B3:F3', 'B5:F5', 'B6:H6', 'B7:H7', 'B20:H20', 'B21:H21'
+            "horizontal_thick": [
+                "B3:F3",
+                "B5:F5",
+                "B6:H6",
+                "B7:H7",
+                "B20:H20",
+                "B21:H21",
             ],
-            'vertical': [
-                'E2:E3', 'G6:G20'
+            "vertical": ["E2:E3", "G6:G20"],
+            "vertical_thick": [
+                "B3:B4",
+                "B6:B20",
+                "G3:G4",
+                "C6:C20",
+                "H6:H20",
+                "I6:I20",
             ],
-            'vertical_thick': [
-                'B3:B4', 'B6:B20', 'G3:G4', 'C6:C20', 'H6:H20', 'I6:I20'
-            ]
         }
 
         ExcelStyles.borders(self, row_ranges, cnv)
 
         # add some colour
         colour_cells = {
-            'FFC000': ['G17'],
-            'FFFF00': ['G15', 'G18'],
-            '0070C0': ['G13'],
-            '00B050': ['G11'],
-            'D9D9D9': ['G7']
+            "FFC000": ["G17"],
+            "FFFF00": ["G15", "G18"],
+            "0070C0": ["G13"],
+            "00B050": ["G11"],
+            "D9D9D9": ["G7"],
         }
         ExcelStyles.colours(self, colour_cells, cnv)
 
@@ -1172,9 +1226,7 @@ class excel():
         Outputs:
             None, adds content to openpxyl workbook
         """
-        report = self.workbook.create_sheet(
-            f"snv_interpret_{report_sheet_num}"
-        )
+        report = self.workbook.create_sheet(f"snv_interpret_{report_sheet_num}")
 
         titles = {
             "Gene": [2, 2],
@@ -1193,45 +1245,65 @@ class excel():
             "Associated disease": [4, 2],
             "Known inheritance": [5, 2],
             "Prevalence": [6, 2],
-            ("Allele frequency is >5% (or gene-specific cut off) in "
-             "population data e.g. gnomAD, UKB"): [9, 2],
-            ("Null variant in a gene where LOF is known mechanism "
-             "of disease\nand non-canonical splice variants where "
-             "RNA analysis confirms\naberrant transcription"): [10, 2],
-            ("Same AA change as previously established pathogenic "
-             "variant\nregardless of nucleotide change and splicing "
-             "variants within\nsame motif with identical predicted "
-             "effect"): [11, 2],
-            ("De novo (confirmed) / observed in\nhealthy adult "
-             "with full penetrance expected at an early age"): [12, 2],
+            (
+                "Allele frequency is >5% (or gene-specific cut off) in "
+                "population data e.g. gnomAD, UKB"
+            ): [9, 2],
+            (
+                "Null variant in a gene where LOF is known mechanism "
+                "of disease\nand non-canonical splice variants where "
+                "RNA analysis confirms\naberrant transcription"
+            ): [10, 2],
+            (
+                "Same AA change as previously established pathogenic "
+                "variant\nregardless of nucleotide change and splicing "
+                "variants within\nsame motif with identical predicted "
+                "effect"
+            ): [11, 2],
+            (
+                "De novo (confirmed) / observed in\nhealthy adult "
+                "with full penetrance expected at an early age"
+            ): [12, 2],
             "In vivo / in vitro functional studies": [13, 2],
             "Prevalence in affected > controls": [14, 2],
-            ("In mutational hot spot and/or critical functional "
-             "domain, without\nbenign variation"): [15, 2],
-            ("Freq in controls eg gnomAD, low/absent (PM2) or allele "
-             "frequency is greater than expected for disorder (BS1)"): [16, 2],
+            (
+                "In mutational hot spot and/or critical functional "
+                "domain, without\nbenign variation"
+            ): [15, 2],
+            (
+                "Freq in controls eg gnomAD, low/absent (PM2) or allele "
+                "frequency is greater than expected for disorder (BS1)"
+            ): [16, 2],
             "Detected in trans/in cis with pathogenic variant": [17, 2],
-            ("In frame protein length change/stop-loss variants, "
-             "non repeat\nvs. repeat region"): [18, 2],
-            ("Missense change at AA where different likely/pathogenic\n"
-             "missense change seen before"): [19, 2],
+            (
+                "In frame protein length change/stop-loss variants, "
+                "non repeat\nvs. repeat region"
+            ): [18, 2],
+            (
+                "Missense change at AA where different likely/pathogenic\n"
+                "missense change seen before"
+            ): [19, 2],
             "Assumed de novo (no confirmation)": [20, 2],
             "Cosegregation with disease in family, not in unaffected": [21, 2],
-            ("Missense where low rate of benign missense and common\n"
-             "mechanism (Z score ≥3.09), or missense where LOF common\n"
-             "mechanism"): [22, 2],
+            (
+                "Missense where low rate of benign missense and common\n"
+                "mechanism (Z score ≥3.09), or missense where LOF common\n"
+                "mechanism"
+            ): [22, 2],
             "Multiple lines of computational evidence": [23, 2],
-            ("Phenotype/FH specific for disease of single etiology, or\n"
-             "alternative genetic cause of disease detected"): [24, 2],
-            ("Synonymous change, no affect on splicing, not conserved; "
-             "splice\nvariants confirmed to have no impact"): [25, 2],
+            (
+                "Phenotype/FH specific for disease of single etiology, or\n"
+                "alternative genetic cause of disease detected"
+            ): [24, 2],
+            (
+                "Synonymous change, no affect on splicing, not conserved; "
+                "splice\nvariants confirmed to have no impact"
+            ): [25, 2],
             "POINTS": [26, 7],
         }
         for key, val in titles.items():
             report.cell(val[0], val[1]).value = key
-            report.cell(val[0], val[1]).font = Font(
-                bold=True, name=DEFAULT_FONT.name
-            )
+            report.cell(val[0], val[1]).font = Font(bold=True, name=DEFAULT_FONT.name)
         classifications = {
             "PVS1": [(10, 7)],
             "PS1": [(11, 7)],
@@ -1258,7 +1330,7 @@ class excel():
             "BP1": [(22, 10)],
             "BP4": [(23, 10)],
             "BP5": [(24, 10)],
-            "BP7": [(25, 10)]
+            "BP7": [(25, 10)],
         }
 
         for key, values in classifications.items():
@@ -1266,106 +1338,162 @@ class excel():
                 report.cell(val[0], val[1]).value = key
 
         # nice formatting of title text and columns
-        for col in (['B', 'C', 'G', 'H', 'I', 'J', 'K', 'L']):
+        for col in ["B", "C", "G", "H", "I", "J", "K", "L"]:
             for row in range(8, 26):
                 if row == 8:
                     report[f"{col}{row}"].alignment = Alignment(
-                           wrapText=True, vertical="center",
-                           horizontal="center"
+                        wrapText=True, vertical="center", horizontal="center"
                     )
                 elif (col == "B" and row != 8) or (col == "C" and row != 8):
                     report.row_dimensions[row].height = 50
                     report[f"{col}{row}"].alignment = Alignment(
-                           wrapText=True, vertical="center"
+                        wrapText=True, vertical="center"
                     )
                 else:
                     report[f"{col}{row}"].alignment = Alignment(
-                           wrapText=True, vertical="center",
-                           horizontal="center"
+                        wrapText=True, vertical="center", horizontal="center"
                     )
-                    report[f"{col}{row}"].font = Font(size=14,
-                                                      name=DEFAULT_FONT.name)
+                    report[f"{col}{row}"].font = Font(size=14, name=DEFAULT_FONT.name)
 
-        for col in (['B', 'C', 'D']):
+        for col in ["B", "C", "D"]:
             for row in range(2, 7):
                 report.row_dimensions[row].height = 20
-                report[f"{col}{row}"].font = Font(size=14, bold=True,
-                                                  name=DEFAULT_FONT.name)
+                report[f"{col}{row}"].font = Font(
+                    size=14, bold=True, name=DEFAULT_FONT.name
+                )
 
         # merge associated disease, inheritance and prevalence cells
         for row in range(4, 8):
             report.merge_cells(
-                start_row=row, end_row=row, start_column=3, end_column=12)
+                start_row=row, end_row=row, start_column=3, end_column=12
+            )
 
         # merge evidence cells
         for row in range(8, 27):
-            report.merge_cells(
-                start_row=row, end_row=row, start_column=3, end_column=6)
+            report.merge_cells(start_row=row, end_row=row, start_column=3, end_column=6)
 
         # merge POINTS cells
-        report.merge_cells(
-                start_row=26, end_row=26, start_column=8, end_column=12)
+        report.merge_cells(start_row=26, end_row=26, start_column=8, end_column=12)
 
         # set appropriate widths
-        report.column_dimensions['B'].width = 62
-        report.column_dimensions['C'].width = 35
-        report.column_dimensions['D'].width = 35
-        report.column_dimensions['E'].width = 5
-        report.column_dimensions['F'].width = 5
-        report.column_dimensions['G'].width = 24
-        report.column_dimensions['H'].width = 14
-        report.column_dimensions['I'].width = 14
-        report.column_dimensions['J'].width = 14
-        report.column_dimensions['K'].width = 14
-        report.column_dimensions['L'].width = 14
-        report.column_dimensions['M'].width = 20
+        report.column_dimensions["B"].width = 62
+        report.column_dimensions["C"].width = 35
+        report.column_dimensions["D"].width = 35
+        report.column_dimensions["E"].width = 5
+        report.column_dimensions["F"].width = 5
+        report.column_dimensions["G"].width = 24
+        report.column_dimensions["H"].width = 14
+        report.column_dimensions["I"].width = 14
+        report.column_dimensions["J"].width = 14
+        report.column_dimensions["K"].width = 14
+        report.column_dimensions["L"].width = 14
+        report.column_dimensions["M"].width = 20
 
         # do some colouring
         colour_cells = {
-            'E46C0A': ['G11', 'G12', 'G13', 'G14'],
-            'FFC000': ['G15', 'G16', 'G17', 'G18', 'G19', 'G20'],
-            'FFFF00': ['G21', 'G22', 'G23', 'G24'],
-            '00B0F0': ['J12', 'J13', 'J16', 'J21'],
-            '92D050': ['J17', 'J18', 'J22', 'J23', 'J24', 'J25'],
-            '0070C0': ['J9'],
-            'FF0000': ['G10'],
-            'D9D9D9': ['G9', 'G25', 'H9', 'H25', 'I9', 'I25',
-                       'J10', 'J11', 'J14', 'J15', 'J19', 'J20',
-                       'K10', 'K11', 'K14', 'K15', 'K19', 'K20',
-                       'L10', 'L11', 'L14', 'L15', 'L19', 'L20'
-                       ]
-
+            "E46C0A": ["G11", "G12", "G13", "G14"],
+            "FFC000": ["G15", "G16", "G17", "G18", "G19", "G20"],
+            "FFFF00": ["G21", "G22", "G23", "G24"],
+            "00B0F0": ["J12", "J13", "J16", "J21"],
+            "92D050": ["J17", "J18", "J22", "J23", "J24", "J25"],
+            "0070C0": ["J9"],
+            "FF0000": ["G10"],
+            "D9D9D9": [
+                "G9",
+                "G25",
+                "H9",
+                "H25",
+                "I9",
+                "I25",
+                "J10",
+                "J11",
+                "J14",
+                "J15",
+                "J19",
+                "J20",
+                "K10",
+                "K11",
+                "K14",
+                "K15",
+                "K19",
+                "K20",
+                "L10",
+                "L11",
+                "L14",
+                "L15",
+                "L19",
+                "L20",
+            ],
         }
 
         ExcelStyles.colours(self, colour_cells, report)
 
         # add some borders
         row_ranges = {
-            'horizontal': [
-                'B3:D3', 'B4:J4', 'B5:L5',
-                'B6:L6', 'B7:L7', 'B8:L8', 'B9:M9', 'B10:M10', 'B11:M11',
-                'B12:M12', 'B13:M13', 'B14:M14', 'B15:M15', 'B16:M16',
-                'B17:M17', 'B18:M18', 'B19:M19', 'B20:M20', 'B21:M21',
-                'B22:M22', 'B23:M23', 'B24:M24', 'B25:M25', 'G3:G3'
+            "horizontal": [
+                "B3:D3",
+                "B4:J4",
+                "B5:L5",
+                "B6:L6",
+                "B7:L7",
+                "B8:L8",
+                "B9:M9",
+                "B10:M10",
+                "B11:M11",
+                "B12:M12",
+                "B13:M13",
+                "B14:M14",
+                "B15:M15",
+                "B16:M16",
+                "B17:M17",
+                "B18:M18",
+                "B19:M19",
+                "B20:M20",
+                "B21:M21",
+                "B22:M22",
+                "B23:M23",
+                "B24:M24",
+                "B25:M25",
+                "G3:G3",
             ],
-            'horizontal_thick': [
-                'B2:D2', 'B4:L4', 'B7:L7', 'B8:M8', 'B26:M26', 'B27:M27',
-                'G2:G2'
+            "horizontal_thick": [
+                "B2:D2",
+                "B4:L4",
+                "B7:L7",
+                "B8:M8",
+                "B26:M26",
+                "B27:M27",
+                "G2:G2",
             ],
-            'vertical': [
-                'E2:E3', 'G8:G26', 'H8:H25', 'I8:I25', 'J8:J25',
-                'K8:K25', 'L8:L25',
+            "vertical": [
+                "E2:E3",
+                "G8:G26",
+                "H8:H25",
+                "I8:I25",
+                "J8:J25",
+                "K8:K25",
+                "L8:L25",
             ],
-            'vertical_thick': [
-                'B2:B6', 'B8:B26', 'C2:C6', 'C8:C26', 'G2:G3', 'H2:H3',
-                'M4:M6', 'M8:M26', 'N8:N26', 'E2:E3'
-            ]
+            "vertical_thick": [
+                "B2:B6",
+                "B8:B26",
+                "C2:C6",
+                "C8:C26",
+                "G2:G3",
+                "H2:H3",
+                "M4:M6",
+                "M8:M26",
+                "N8:N26",
+                "E2:E3",
+            ],
         }
         ExcelStyles.borders(self, row_ranges, report)
 
         # Implement colour labelling
         # Adding yellow to Column M (checker comments column)
-        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        yellow_fill = PatternFill(
+            start_color="FFFF00", end_color="FFFF00", fill_type="solid"
+        )
 
         # Adding yellow to G2 and G3 (Transcripts/IGV checked column)
         report["G2"].fill = yellow_fill

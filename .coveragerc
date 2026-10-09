@@ -1,0 +1,11 @@
+[run]
+source = resources/home/dnanexus
+omit =
+    resources/home/dnanexus/tests/*
+    resources/home/dnanexus/packages/*
+    */__pycache__/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
