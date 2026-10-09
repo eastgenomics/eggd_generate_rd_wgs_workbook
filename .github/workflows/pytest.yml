@@ -34,3 +34,4 @@ jobs:
           file: coverage.xml
           language: Python
           label: code-coverage/pytest
+          fail-on-error: false
