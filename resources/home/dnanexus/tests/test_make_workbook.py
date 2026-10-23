@@ -566,7 +566,6 @@ class TestVariantInfo:
             "AF Max",
         ]
         ev_idx = 0
-        proband_sex = "MALE"
 
         # Expected output for TIER1 STR
         expected_output = var_info.add_columns_to_dict(columns)
@@ -588,7 +587,7 @@ class TestVariantInfo:
 
         # Call the function to test for TEIR1
         result = var_info.get_str_info(
-            mock_variant, proband, columns, ev_idx, proband_sex
+            mock_variant, proband, columns, ev_idx
         )
 
         # Assertions
@@ -618,11 +617,10 @@ class TestVariantInfo:
             "AF Max",
         ]
         ev_idx = 0
-        proband_sex = "FEMALE"
 
         # Call the function to test for TIER2
         result = var_info.get_str_info(
-            mock_variant, proband, columns, ev_idx, proband_sex
+            mock_variant, proband, columns, ev_idx
         )
 
         # Expected output for TIER2 STR
@@ -668,11 +666,10 @@ class TestVariantInfo:
             "AF Max",
         ]
         ev_idx = 0
-        proband_sex = "MALE"
 
         # Call the function to test for null tier
         result = var_info.get_str_info(
-            mock_variant, proband, columns, ev_idx, proband_sex
+            mock_variant, proband, columns, ev_idx
         )
 
         # Expected output for null tier STR
@@ -738,11 +735,10 @@ class TestVariantInfo:
             "AF Max",
         ]
         ev_idx = 0
-        proband_sex = "MALE"
 
         # Call the function to test with hemizygous proband
         result = var_info.get_str_info(
-            mock_variant, proband, columns, ev_idx, proband_sex
+            mock_variant, proband, columns, ev_idx
         )
 
         # Expected output for hemizygous proband
@@ -766,43 +762,54 @@ class TestVariantInfo:
         assert result == expected_output
 
     @pytest.mark.parametrize(
-        "chrom, proband_sex, copies, expected_str2",
+        "chrom, copies, expected_str1, expected_str2, expect_warning",
         [
-            # chrX STR, sex unknown, one allele: STR2 left blank (issue #51)
-            ("X", "UNKNOWN", [8], ""),
-            # chrX STR, XY proband, one allele: unchanged behaviour
-            ("X", "MALE", [8], ""),
+            # chrX STR, one allele (XY, or sex UNKNOWN as in issue #51)
+            ("X", [8], 8, "", False),
+            # chrX STR, two alleles (XX, or an XY proband with two X alleles)
+            ("X", [8, 16], 8, 16, False),
             # autosomal STR, two alleles: unchanged behaviour
-            ("12", "UNKNOWN", [8, 16], 16),
-            # chrX STR, XX proband, two alleles: unchanged behaviour
-            ("X", "FEMALE", [8, 16], 16),
+            ("12", [8, 16], 8, 16, False),
+            # autosomal STR, one allele: STR2 blank and flagged in the log
+            ("12", [8], 8, "", True),
+            # no alleles called, null or empty: both blank and flagged
+            ("X", None, "", "", True),
+            ("12", [], "", "", True),
         ],
         ids=[
-            "chrX_unknown_sex_one_allele",
-            "chrX_male_one_allele",
+            "chrX_one_allele",
+            "chrX_two_alleles",
             "autosomal_two_alleles",
-            "chrX_female_two_alleles",
+            "autosomal_one_allele",
+            "no_alleles_null",
+            "no_alleles_empty",
         ],
     )
-    def test_get_str_info_second_allele(
-        self, mock_variant, chrom, proband_sex, copies, expected_str2
+    def test_get_str_info_alleles(
+        self,
+        mock_variant,
+        capsys,
+        chrom,
+        copies,
+        expected_str1,
+        expected_str2,
+        expect_warning,
     ):
         """
-        Check STR2 is only populated when there is a second allele to report,
-        and that a single allele on chrX does not raise an error when the
-        proband sex is not MALE.
+        Check STR1 and STR2 are populated from the alleles called in the JSON,
+        blank where there is no allele to report, and that fewer alleles than
+        expected are flagged in the job log rather than raising an error.
         """
         mock_variant["coordinates"]["chromosome"] = chrom
-        mock_variant["variantCalls"][0]["numberOfCopies"] = [
-            {"numberOfCopies": n} for n in copies
-        ]
-
-        result = var_info.get_str_info(
-            mock_variant, "testPB", ["STR1", "STR2"], 0, proband_sex
+        mock_variant["variantCalls"][0]["numberOfCopies"] = (
+            None if copies is None else [{"numberOfCopies": n} for n in copies]
         )
 
-        assert result["STR1"] == 8
+        result = var_info.get_str_info(mock_variant, "testPB", ["STR1", "STR2"], 0)
+
+        assert result["STR1"] == expected_str1
         assert result["STR2"] == expected_str2
+        assert ("Warning" in capsys.readouterr().out) == expect_warning
 
     def test_tier_conversion(self):
         """
@@ -1285,22 +1292,30 @@ class TestNoVariantsOfType:
     can have these lists empty or set to null (issue #51).
     """
 
-    # Untiered chrX STR with one allele, which is not reported on the Variants
-    # sheet but is listed on the STR guidelines sheet
-    untiered_x_str = {
-        "coordinates": {"chromosome": "X", "start": 1000, "end": 1060},
-        "reportEvents": [
-            {
-                "tier": None,
-                "genomicEntities": [{"type": "gene", "geneSymbol": "SYMB1"}],
-            }
-        ],
-        "shortTandemRepeatReferenceData": {"repeatedSequence": "CGG"},
-        "variantCalls": [
-            {"participantId": "proband_id", "numberOfCopies": [{"numberOfCopies": 30}]}
-        ],
-        "variantAttributes": {"alleleFrequencies": None},
-    }
+    @staticmethod
+    def make_untiered_x_str(copies):
+        """
+        Create an untiered chrX STR with the given repeat numbers for the
+        proband. Untiered STRs are not reported on the Variants sheet but are
+        listed on the STR guidelines sheet
+        """
+        return {
+            "coordinates": {"chromosome": "X", "start": 1000, "end": 1060},
+            "reportEvents": [
+                {
+                    "tier": None,
+                    "genomicEntities": [{"type": "gene", "geneSymbol": "SYMB1"}],
+                }
+            ],
+            "shortTandemRepeatReferenceData": {"repeatedSequence": "CGG"},
+            "variantCalls": [
+                {
+                    "participantId": "proband_id",
+                    "numberOfCopies": [{"numberOfCopies": n} for n in copies],
+                }
+            ],
+            "variantAttributes": {"alleleFrequencies": None},
+        }
 
     @staticmethod
     def make_excel_instance(tmp_path, gel_data, exomiser_variants):
@@ -1353,20 +1368,42 @@ class TestNoVariantsOfType:
         headers = [cell.value for cell in sheet[61]]
         assert headers == excel_instance.column_list
 
-    def test_str_page_lists_untiered_x_str_with_one_allele(self, tmp_path):
+    @pytest.mark.parametrize(
+        "proband_sex, copies, expected_str2",
+        [
+            # sex UNKNOWN, one allele: STR2 blank, no error (issue #51)
+            ("UNKNOWN", [30], ""),
+            # XY proband, one allele: unchanged behaviour
+            ("MALE", [30], ""),
+            # XX proband, two alleles: unchanged behaviour
+            ("FEMALE", [30, 32], 32),
+            # XY proband with two X alleles (e.g. XXY): second allele shown
+            ("MALE", [30, 32], 32),
+        ],
+        ids=[
+            "unknown_sex_one_allele",
+            "male_one_allele",
+            "female_two_alleles",
+            "male_two_alleles",
+        ],
+    )
+    def test_str_page_lists_untiered_x_str(
+        self, tmp_path, proband_sex, copies, expected_str2
+    ):
         """
-        Untiered chrX STR with one allele in a proband of unknown sex should
-        be listed on the STR guidelines sheet with STR2 left blank, rather
-        than causing the app to fail
+        Untiered chrX STR should be listed on the STR guidelines sheet with
+        the repeat numbers called in the JSON, whatever the proband's sex,
+        rather than causing the app to fail
         """
         excel_instance = self.make_excel_instance(
-            tmp_path, {"shortTandemRepeats": [self.untiered_x_str]}, []
+            tmp_path, {"shortTandemRepeats": [self.make_untiered_x_str(copies)]}, []
         )
+        excel_instance.proband_sex = proband_sex
         excel_instance.str_image_page()
 
         assert len(excel_instance.str_df) == 1
         assert excel_instance.str_df.iloc[0]["STR1"] == 30
-        assert excel_instance.str_df.iloc[0]["STR2"] == ""
+        assert excel_instance.str_df.iloc[0]["STR2"] == expected_str2
 
     @pytest.mark.parametrize("no_variants", [[], None], ids=["empty", "null"])
     def test_gel_tiering_page_counts_zero_if_no_variants(
