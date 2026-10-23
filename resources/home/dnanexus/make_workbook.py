@@ -1085,6 +1085,11 @@ class excel:
             )
             summary_sheet["B30"] = ex_df["Priority"].str.startswith("Exomiser").sum()
 
+        # if there are no exomiser/de novo variants add 0 counts to summary sheet
+        else:
+            summary_sheet["B30"] = 0
+            summary_sheet["B31"] = 0
+
     def write_cnv_reporting_template(self, cnv_sheet_num):
         """
         Write CNV reporting template to sheet(s) in the workbook.

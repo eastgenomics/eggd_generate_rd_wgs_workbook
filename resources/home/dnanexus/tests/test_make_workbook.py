@@ -1483,3 +1483,43 @@ class TestNoVariantsOfType:
         excel_instance.create_additional_analysis_page()
 
         assert "Extended_analysis" in excel_instance.workbook.sheetnames
+
+    @pytest.mark.parametrize(
+        "exomiser_variants",
+        [
+            # no Exomiser variants at all
+            [],
+            # Exomiser variant with a score below the 0.75 threshold
+            [
+                {
+                    "variantCoordinates": {
+                        "chromosome": "1",
+                        "position": 12345,
+                        "reference": "A",
+                        "alternate": "G",
+                    },
+                    "reportEvents": [
+                        {"score": 0.5, "vendorSpecificScores": {"rank": 1}}
+                    ],
+                }
+            ],
+        ],
+        ids=["no_exomiser_variants", "exomiser_below_threshold"],
+    )
+    def test_summary_counts_zero_if_no_exomiser_or_de_novo_variants(
+        self, tmp_path, exomiser_variants
+    ):
+        """
+        If no Exomiser variants pass the score threshold and there are no de
+        novo variants, the Exomiser and de novo counts on the summary sheet
+        should be 0 rather than left blank
+        """
+        excel_instance = self.make_excel_instance(
+            tmp_path, {"variants": []}, exomiser_variants
+        )
+        excel_instance.var_df = pd.DataFrame(columns=excel_instance.column_list)
+        excel_instance.create_additional_analysis_page()
+
+        summary = excel_instance.workbook["Summary"]
+        assert summary["B30"].value == 0
+        assert summary["B31"].value == 0
