@@ -765,6 +765,45 @@ class TestVariantInfo:
 
         assert result == expected_output
 
+    @pytest.mark.parametrize(
+        "chrom, proband_sex, copies, expected_str2",
+        [
+            # chrX STR, sex unknown, one allele: STR2 left blank (issue #51)
+            ("X", "UNKNOWN", [8], ""),
+            # chrX STR, XY proband, one allele: unchanged behaviour
+            ("X", "MALE", [8], ""),
+            # autosomal STR, two alleles: unchanged behaviour
+            ("12", "UNKNOWN", [8, 16], 16),
+            # chrX STR, XX proband, two alleles: unchanged behaviour
+            ("X", "FEMALE", [8, 16], 16),
+        ],
+        ids=[
+            "chrX_unknown_sex_one_allele",
+            "chrX_male_one_allele",
+            "autosomal_two_alleles",
+            "chrX_female_two_alleles",
+        ],
+    )
+    def test_get_str_info_second_allele(
+        self, mock_variant, chrom, proband_sex, copies, expected_str2
+    ):
+        """
+        Check STR2 is only populated when there is a second allele to report,
+        and that a single allele on chrX does not raise an error when the
+        proband sex is not MALE.
+        """
+        mock_variant["coordinates"]["chromosome"] = chrom
+        mock_variant["variantCalls"][0]["numberOfCopies"] = [
+            {"numberOfCopies": n} for n in copies
+        ]
+
+        result = var_info.get_str_info(
+            mock_variant, "testPB", ["STR1", "STR2"], 0, proband_sex
+        )
+
+        assert result["STR1"] == 8
+        assert result["STR2"] == expected_str2
+
     def test_tier_conversion(self):
         """
         Test Tiers from JSON are converted into tier representation as desired
@@ -1238,3 +1277,135 @@ class TestExomiomiserDenovoDuplicates:
             )
 
             pd.testing.assert_frame_equal(actual_df, expected_df)
+
+
+class TestNoVariantsOfType:
+    """
+    Tests for cases where the JSON has no variants of a given type. GEL JSONs
+    can have these lists empty or set to null (issue #51).
+    """
+
+    # Untiered chrX STR with one allele, which is not reported on the Variants
+    # sheet but is listed on the STR guidelines sheet
+    untiered_x_str = {
+        "coordinates": {"chromosome": "X", "start": 1000, "end": 1060},
+        "reportEvents": [
+            {
+                "tier": None,
+                "genomicEntities": [{"type": "gene", "geneSymbol": "SYMB1"}],
+            }
+        ],
+        "shortTandemRepeatReferenceData": {"repeatedSequence": "CGG"},
+        "variantCalls": [
+            {"participantId": "proband_id", "numberOfCopies": [{"numberOfCopies": 30}]}
+        ],
+        "variantAttributes": {"alleleFrequencies": None},
+    }
+
+    @staticmethod
+    def make_excel_instance(tmp_path, gel_data, exomiser_variants):
+        """
+        Create an excel instance writing to a real workbook in tmp_path, with
+        the given GEL tiering data and Exomiser variants in the JSON
+        """
+        excel_instance = excel(MagicMock())
+        excel_instance.wgs_data = {
+            "interpretedGenomes": [
+                {
+                    "interpretedGenomeData": {
+                        "interpretationService": "genomics_england_tiering",
+                        **gel_data,
+                    }
+                },
+                {
+                    "interpretedGenomeData": {
+                        "interpretationService": "exomiser",
+                        "variants": exomiser_variants,
+                    }
+                },
+            ]
+        }
+        excel_instance.get_interpreted_genome_format()
+        excel_instance.index_interpretation_services()
+        excel_instance.proband = "proband_id"
+        excel_instance.proband_sex = "UNKNOWN"
+        excel_instance.mane = []
+        excel_instance.refseq_tsv = []
+        excel_instance.writer = pd.ExcelWriter(
+            tmp_path / "test.xlsx", engine="openpyxl"
+        )
+        excel_instance.workbook = excel_instance.writer.book
+        excel_instance.workbook.create_sheet("Summary")
+        return excel_instance
+
+    @pytest.mark.parametrize("no_strs", [[], None], ids=["empty", "null"])
+    def test_str_page_written_with_headers_if_no_strs(self, tmp_path, no_strs):
+        """
+        STR guidelines sheet should still be written, with column headers
+        below the guidelines, if there are no STRs
+        """
+        excel_instance = self.make_excel_instance(
+            tmp_path, {"shortTandemRepeats": no_strs}, []
+        )
+        excel_instance.str_image_page()
+
+        sheet = excel_instance.workbook["STR guidelines"]
+        headers = [cell.value for cell in sheet[61]]
+        assert headers == excel_instance.column_list
+
+    def test_str_page_lists_untiered_x_str_with_one_allele(self, tmp_path):
+        """
+        Untiered chrX STR with one allele in a proband of unknown sex should
+        be listed on the STR guidelines sheet with STR2 left blank, rather
+        than causing the app to fail
+        """
+        excel_instance = self.make_excel_instance(
+            tmp_path, {"shortTandemRepeats": [self.untiered_x_str]}, []
+        )
+        excel_instance.str_image_page()
+
+        assert len(excel_instance.str_df) == 1
+        assert excel_instance.str_df.iloc[0]["STR1"] == 30
+        assert excel_instance.str_df.iloc[0]["STR2"] == ""
+
+    @pytest.mark.parametrize("no_variants", [[], None], ids=["empty", "null"])
+    def test_gel_tiering_page_counts_zero_if_no_variants(
+        self, tmp_path, no_variants
+    ):
+        """
+        If there are no SNVs, STRs or CNVs, the Variants sheet should be
+        written with headers and all tier counts on the summary sheet set to 0
+        """
+        excel_instance = self.make_excel_instance(
+            tmp_path,
+            {
+                "variants": no_variants,
+                "shortTandemRepeats": no_variants,
+                "structuralVariants": no_variants,
+            },
+            [],
+        )
+        excel_instance.create_gel_tiering_variant_page()
+
+        headers = [cell.value for cell in excel_instance.workbook["Variants"][1]]
+        assert headers == excel_instance.column_list
+
+        summary = excel_instance.workbook["Summary"]
+        for cell in ["B22", "B23", "B25", "B26", "B27", "B28"]:
+            assert summary[cell].value == 0
+
+    @pytest.mark.parametrize("no_variants", [[], None], ids=["empty", "null"])
+    def test_additional_analysis_page_written_if_no_variants(
+        self, tmp_path, no_variants
+    ):
+        """
+        If there are no Exomiser or de novo variants, the Extended_analysis
+        sheet should still be written without error
+        """
+        excel_instance = self.make_excel_instance(
+            tmp_path, {"variants": no_variants}, no_variants
+        )
+        excel_instance.var_df = pd.DataFrame(columns=excel_instance.column_list)
+        excel_instance.create_additional_analysis_page()
+
+        assert "Extended_analysis" in excel_instance.workbook.sheetnames

@@ -231,8 +231,11 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
     # Get the repeat number from the JSON for one allele
     var_dict["STR1"] = num_copies(variant, pb_idx, 0)
     # Get the repeat number from the JSON for the other allele
-    # only if the STR is not in the X chromosome of a XY proband
-    if var_dict["Chr"] in ["X"] and pb_sex == "MALE":
+    # only if the STR is not in the X chromosome of a XY proband. Probands of
+    # unknown sex may only have one allele called on X, so leave blank if
+    # there is no second allele
+    n_alleles = len(variant["variantCalls"][pb_idx]["numberOfCopies"])
+    if var_dict["Chr"] in ["X"] and (pb_sex == "MALE" or n_alleles < 2):
         var_dict["STR2"] = ""
     else:
         var_dict["STR2"] = num_copies(variant, pb_idx, 1)
