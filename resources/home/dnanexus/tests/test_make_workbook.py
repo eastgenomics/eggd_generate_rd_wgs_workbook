@@ -772,17 +772,12 @@ class TestVariantInfo:
             ("12", [8, 16], 8, 16, False),
             # autosomal STR, one allele: STR2 blank and flagged in the log
             ("12", [8], 8, "", True),
-            # no alleles called, null or empty: both blank and flagged
-            ("X", None, "", "", True),
-            ("12", [], "", "", True),
         ],
         ids=[
             "chrX_one_allele",
             "chrX_two_alleles",
             "autosomal_two_alleles",
             "autosomal_one_allele",
-            "no_alleles_null",
-            "no_alleles_empty",
         ],
     )
     def test_get_str_info_alleles(
@@ -797,19 +792,41 @@ class TestVariantInfo:
     ):
         """
         Check STR1 and STR2 are populated from the alleles called in the JSON,
-        blank where there is no allele to report, and that fewer alleles than
-        expected are flagged in the job log rather than raising an error.
+        STR2 is blank where there is no second allele, and that one allele on
+        an autosome is flagged in the job log rather than raising an error.
         """
         mock_variant["coordinates"]["chromosome"] = chrom
-        mock_variant["variantCalls"][0]["numberOfCopies"] = (
-            None if copies is None else [{"numberOfCopies": n} for n in copies]
-        )
+        mock_variant["variantCalls"][0]["numberOfCopies"] = [
+            {"numberOfCopies": n} for n in copies
+        ]
 
         result = var_info.get_str_info(mock_variant, "testPB", ["STR1", "STR2"], 0)
 
         assert result["STR1"] == expected_str1
         assert result["STR2"] == expected_str2
         assert ("Warning" in capsys.readouterr().out) == expect_warning
+
+    @pytest.mark.parametrize(
+        "chrom, copies",
+        [("X", None), ("X", []), ("12", None), ("12", [])],
+        ids=["chrX_null", "chrX_empty", "autosomal_null", "autosomal_empty"],
+    )
+    def test_get_str_info_raises_if_no_alleles(self, mock_variant, chrom, copies):
+        """
+        Check an informative error is raised if no alleles are called for the
+        proband, as at least one repeat number is expected for every STR.
+        """
+        mock_variant["coordinates"]["chromosome"] = chrom
+        mock_variant["variantCalls"][0]["numberOfCopies"] = copies
+
+        with pytest.raises(RuntimeError) as error:
+            var_info.get_str_info(mock_variant, "testPB", ["STR1", "STR2"], 0)
+
+        # Error should name the proband and STR, so it can be found in the JSON
+        message = str(error.value)
+        assert "No alleles called for proband testPB" in message
+        assert f"SYMB1 STR at {chrom}:6936728-6936773" in message
+        assert f"found {copies}" in message
 
     def test_tier_conversion(self):
         """
@@ -1404,6 +1421,26 @@ class TestNoVariantsOfType:
         assert len(excel_instance.str_df) == 1
         assert excel_instance.str_df.iloc[0]["STR1"] == 30
         assert excel_instance.str_df.iloc[0]["STR2"] == expected_str2
+
+    @pytest.mark.parametrize("no_copies", [[], None], ids=["empty", "null"])
+    def test_str_page_fails_if_no_alleles_called(self, tmp_path, no_copies):
+        """
+        If no alleles are called for the proband in an STR, the app should
+        fail with an error naming the STR rather than write a workbook with
+        no repeat numbers for it
+        """
+        s_t_r = self.make_untiered_x_str([])
+        s_t_r["variantCalls"][0]["numberOfCopies"] = no_copies
+        excel_instance = self.make_excel_instance(
+            tmp_path, {"shortTandemRepeats": [s_t_r]}, []
+        )
+
+        with pytest.raises(
+            RuntimeError,
+            match="No alleles called for proband proband_id in SYMB1 STR at "
+            "X:1000-1060",
+        ):
+            excel_instance.str_image_page()
 
     @pytest.mark.parametrize("no_variants", [[], None], ids=["empty", "null"])
     def test_gel_tiering_page_counts_zero_if_no_variants(

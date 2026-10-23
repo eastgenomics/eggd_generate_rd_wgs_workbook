@@ -224,22 +224,36 @@ def get_str_info(variant, proband, columns, ev_idx):
     var_dict["Priority"] = convert_tier(variant["reportEvents"][ev_idx]["tier"], "STR")
 
     var_dict["Repeat"] = variant["shortTandemRepeatReferenceData"]["repeatedSequence"]
+    var_dict["Gene"] = get_gene_symbol(variant)
+    str_location = (
+        f"{var_dict['Gene']} STR at "
+        f"{var_dict['Chr']}:{var_dict['Pos']}-{var_dict['End']}"
+    )
+
     # Get the repeat number for each allele GEL called for the proband. This
     # is based on the alleles in the JSON rather than the proband's sex, as
     # only one allele is called on X for XY probands and sex can be UNKNOWN
     copies = variant["variantCalls"][pb_idx]["numberOfCopies"] or []
-    var_dict["STR1"] = copies[0]["numberOfCopies"] if copies else ""
+
+    # At least one allele is expected for every STR, so fail rather than
+    # writing an STR with no repeat numbers to the workbook
+    if not copies:
+        raise RuntimeError(
+            f"No alleles called for proband {proband} in {str_location}. "
+            "Expected at least one repeat number in numberOfCopies, found "
+            f"{variant['variantCalls'][pb_idx]['numberOfCopies']}."
+        )
+
+    var_dict["STR1"] = copies[0]["numberOfCopies"]
     var_dict["STR2"] = copies[1]["numberOfCopies"] if len(copies) > 1 else ""
 
-    # Two alleles are expected outside of X, and at least one on X, so flag
-    # any STR with fewer in the job log rather than failing
-    if not copies or (var_dict["Chr"] != "X" and len(copies) < 2):
+    # Two alleles are expected outside of X, so flag any autosomal STR with
+    # one in the job log rather than failing
+    if var_dict["Chr"] != "X" and len(copies) < 2:
         print(
-            f"Warning: {len(copies)} allele(s) called for proband in STR at "
-            f"{var_dict['Chr']}:{var_dict['Pos']}-{var_dict['End']}. Leaving "
-            "missing repeat number(s) blank in the workbook."
+            f"Warning: 1 allele called for proband {proband} in "
+            f"{str_location}. Leaving STR2 blank in the workbook."
         )
-    var_dict["Gene"] = get_gene_symbol(variant)
     var_dict["AF Max"] = get_af_max(variant)
     return var_dict
 
