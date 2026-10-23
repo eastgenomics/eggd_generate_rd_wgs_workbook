@@ -195,7 +195,7 @@ def index_participant(variant, participant_id):
     return index
 
 
-def get_str_info(variant, proband, columns, ev_idx, pb_sex):
+def get_str_info(variant, proband, columns, ev_idx):
     """
     Each variant that will be added to the excel workbook, needs to be
     added to the dataframe via a dictionary of values for each column
@@ -214,10 +214,6 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
         formatted with the correct column headings for the excel workbook.
         this will be added to a list of dicts for conversion into dataframe
     """
-    num_copies = lambda x, y, z: x["variantCalls"][y]["numberOfCopies"][z][
-        "numberOfCopies"
-    ]
-
     var_dict = add_columns_to_dict(columns)
     pb_idx = index_participant(variant, proband)
     var_dict["Chr"] = variant["coordinates"]["chromosome"]
@@ -228,15 +224,36 @@ def get_str_info(variant, proband, columns, ev_idx, pb_sex):
     var_dict["Priority"] = convert_tier(variant["reportEvents"][ev_idx]["tier"], "STR")
 
     var_dict["Repeat"] = variant["shortTandemRepeatReferenceData"]["repeatedSequence"]
-    # Get the repeat number from the JSON for one allele
-    var_dict["STR1"] = num_copies(variant, pb_idx, 0)
-    # Get the repeat number from the JSON for the other allele
-    # only if the STR is not in the X chromosome of a XY proband
-    if var_dict["Chr"] in ["X"] and pb_sex == "MALE":
-        var_dict["STR2"] = ""
-    else:
-        var_dict["STR2"] = num_copies(variant, pb_idx, 1)
     var_dict["Gene"] = get_gene_symbol(variant)
+    str_location = (
+        f"{var_dict['Gene']} STR at "
+        f"{var_dict['Chr']}:{var_dict['Pos']}-{var_dict['End']}"
+    )
+
+    # Get the repeat number for each allele GEL called for the proband. This
+    # is based on the alleles in the JSON rather than the proband's sex, as
+    # only one allele is called on X for XY probands and sex can be UNKNOWN
+    copies = variant["variantCalls"][pb_idx]["numberOfCopies"] or []
+
+    # At least one allele is expected for every STR, so fail rather than
+    # writing an STR with no repeat numbers to the workbook
+    if not copies:
+        raise RuntimeError(
+            f"No alleles called for proband {proband} in {str_location}. "
+            "Expected at least one repeat number in numberOfCopies, found "
+            f"{variant['variantCalls'][pb_idx]['numberOfCopies']}."
+        )
+
+    var_dict["STR1"] = copies[0]["numberOfCopies"]
+    var_dict["STR2"] = copies[1]["numberOfCopies"] if len(copies) > 1 else ""
+
+    # Two alleles are expected outside of X, so flag any autosomal STR with
+    # one in the job log rather than failing
+    if var_dict["Chr"] != "X" and len(copies) < 2:
+        print(
+            f"Warning: 1 allele called for proband {proband} in "
+            f"{str_location}. Leaving STR2 blank in the workbook."
+        )
     var_dict["AF Max"] = get_af_max(variant)
     return var_dict
 

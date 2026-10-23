@@ -611,6 +611,25 @@ class excel:
                     "'genomics_england_tiering' or 'Exomiser'"
                 )
 
+    def get_variants(self, index, variant_type):
+        """
+        Get the list of variants of a given type for an interpretation
+        service. GEL JSONs can set these fields to null when there are no
+        variants of that type, so return an empty list if null or missing.
+        Inputs:
+            index (int): index of the interpretation service in the JSON
+            variant_type (str): "variants", "shortTandemRepeats" or
+            "structuralVariants"
+        Outputs:
+            list of variant dicts, or an empty list
+        """
+        return (
+            self.wgs_data[self.genome_format][index][self.genome_data_format].get(
+                variant_type
+            )
+            or []
+        )
+
     def str_image_page(self):
         """
         STR table is useful for interpretation, so will be included on a sheet
@@ -625,19 +644,22 @@ class excel:
         str_list = []
 
         # STRs
-        for s_t_r in self.wgs_data[self.genome_format][self.gel_index][
-            self.genome_data_format
-        ]["shortTandemRepeats"]:
+        for s_t_r in self.get_variants(self.gel_index, "shortTandemRepeats"):
             for event in s_t_r["reportEvents"]:
                 event_index = s_t_r["reportEvents"].index(event)
                 var_dict = var_info.get_str_info(
-                    s_t_r, self.proband, self.column_list, event_index, self.proband_sex
+                    s_t_r, self.proband, self.column_list, event_index
                 )
                 str_list.append(var_dict)
 
         # Add all variants into dataframe
         self.str_df = pd.DataFrame(str_list)
         self.str_df = self.str_df.drop_duplicates()
+
+        # pd.DataFrame([]) has no columns, so if there are no STRs, force the
+        # expected columns so headers still get written below the guidelines
+        if self.str_df.empty:
+            self.str_df = pd.DataFrame(columns=self.column_list)
 
         self.str_df.to_excel(
             self.writer, sheet_name="STR guidelines", index=False, startrow=60
@@ -671,9 +693,7 @@ class excel:
         variant_list = []
 
         # SNVs
-        for snv in self.wgs_data[self.genome_format][self.gel_index][
-            self.genome_data_format
-        ]["variants"]:
+        for snv in self.get_variants(self.gel_index, "variants"):
             for event in snv["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = snv["reportEvents"].index(event)
@@ -695,9 +715,7 @@ class excel:
                     variant_list.append(var_dict)
 
         # STRs
-        for s_t_r in self.wgs_data[self.genome_format][self.gel_index][
-            self.genome_data_format
-        ]["shortTandemRepeats"]:
+        for s_t_r in self.get_variants(self.gel_index, "shortTandemRepeats"):
             for event in s_t_r["reportEvents"]:
                 if event["tier"] in ["TIER1", "TIER2"]:
                     event_index = s_t_r["reportEvents"].index(event)
@@ -706,14 +724,11 @@ class excel:
                         self.proband,
                         self.column_list,
                         event_index,
-                        self.proband_sex,
                     )
                     variant_list.append(var_dict)
 
         # CNVs
-        for cnv in self.wgs_data[self.genome_format][self.gel_index][
-            self.genome_data_format
-        ]["structuralVariants"]:
+        for cnv in self.get_variants(self.gel_index, "structuralVariants"):
             for event in cnv["reportEvents"]:
                 event_index = cnv["reportEvents"].index(event)
                 # CNVs can be reported as Tier 1 ,Tier A, Tier 2 and Tier B
@@ -804,9 +819,7 @@ class excel:
             Outputs:
                 tier (int or None): Highest clinical GEL tier for the variant, or None if not found
             """
-            gel_variants = self.wgs_data[self.genome_format][self.gel_index][
-                self.genome_data_format
-            ]["variants"]
+            gel_variants = self.get_variants(self.gel_index, "variants")
 
             tier_nums = []
             for gel_snv in gel_variants:
@@ -832,9 +845,7 @@ class excel:
         ranked = []
         # Look through Exomiser SNVs and return those that are ranked
         # 1, 2, or 3 and have a score >= 0.75
-        for snv in self.wgs_data[self.genome_format][self.ex_index][
-            self.genome_data_format
-        ]["variants"]:
+        for snv in self.get_variants(self.ex_index, "variants"):
             ev_to_look_at = []
 
             # Get chr, pos, ref, alt for use in MT GEL tier lookup
@@ -915,9 +926,7 @@ class excel:
         # Get variants with high de novo quality score (these are either SNVs
         # or indels). These variants only appear in the JSON if the quality
         # score is above the threshold
-        for snv in self.wgs_data[self.genome_format][self.gel_index][
-            self.genome_data_format
-        ]["variants"]:
+        for snv in self.get_variants(self.gel_index, "variants"):
             for event in snv["reportEvents"]:
                 if event["segregationPattern"] == "deNovo":
                     event_index = snv["reportEvents"].index(event)
@@ -1075,6 +1084,11 @@ class excel:
                 .sum()
             )
             summary_sheet["B30"] = ex_df["Priority"].str.startswith("Exomiser").sum()
+
+        # if there are no exomiser/de novo variants add 0 counts to summary sheet
+        else:
+            summary_sheet["B30"] = 0
+            summary_sheet["B31"] = 0
 
     def write_cnv_reporting_template(self, cnv_sheet_num):
         """
