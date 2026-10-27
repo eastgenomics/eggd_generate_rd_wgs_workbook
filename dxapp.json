@@ -10,10 +10,11 @@
       "1.4.0": "Fix bugs. Add checks for hemizygous SNV in proband",
       "1.5.0": "Fix bugs. Updated variant handling, STR reporting, suffix generation, colour labelling, and workbook highlighting.",
       "1.6.0": "Added comment-taking sections for SNV and CNV reporting, bug fixes on the searching of NM_ transcripts.",
-      "1.7.0": "Fixed Exomiser rank bug where GEL df empty. Added all STRs to STR page."
+      "1.7.0": "Fixed Exomiser rank bug where GEL df empty. Added all STRs to STR page.",
+      "1.7.1": "Changed behaviour around handling of combinations of unexpected sample sex and STR2 repeat counts, opting for warnings over crashes."
       },
     "dxapi": "1.0.0",
-    "version": "1.7.0",
+    "version": "1.7.1",
     "inputSpec": [
       {
         "name": "json",
