@@ -244,8 +244,22 @@ def get_str_info(variant, proband, columns, ev_idx):
             f"{variant['variantCalls'][pb_idx]['numberOfCopies']}."
         )
 
-    var_dict["STR1"] = copies[0]["numberOfCopies"]
-    var_dict["STR2"] = copies[1]["numberOfCopies"] if len(copies) > 1 else ""
+    # GEL's schema requires each repeat number to be an int, so fail rather
+    # than write a missing or invalid repeat number to the workbook
+    repeat_numbers = [
+        allele.get("numberOfCopies") if isinstance(allele, dict) else None
+        for allele in copies[:2]
+    ]
+    for repeat_number in repeat_numbers:
+        if not isinstance(repeat_number, int) or isinstance(repeat_number, bool):
+            raise RuntimeError(
+                f"Invalid repeat number for proband {proband} in "
+                f"{str_location}. Expected an integer numberOfCopies for each "
+                f"allele, found {copies}."
+            )
+
+    var_dict["STR1"] = repeat_numbers[0]
+    var_dict["STR2"] = repeat_numbers[1] if len(repeat_numbers) > 1 else ""
 
     # Two alleles are expected outside of X, so flag any autosomal STR with
     # one in the job log rather than failing

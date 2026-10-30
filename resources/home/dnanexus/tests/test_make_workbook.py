@@ -828,6 +828,42 @@ class TestVariantInfo:
         assert f"SYMB1 STR at {chrom}:6936728-6936773" in message
         assert f"found {copies}" in message
 
+    @pytest.mark.parametrize(
+        "copies",
+        [
+            [{"numberOfCopies": None}],
+            [{}],
+            [{"numberOfCopies": 8}, {"numberOfCopies": None}],
+            [{"numberOfCopies": 8}, {}],
+            [{"numberOfCopies": "8"}],
+            [None],
+        ],
+        ids=[
+            "first_allele_null",
+            "first_allele_missing",
+            "second_allele_null",
+            "second_allele_missing",
+            "not_an_integer",
+            "allele_entry_null",
+        ],
+    )
+    def test_get_str_info_raises_if_invalid_repeat_number(self, mock_variant, copies):
+        """
+        Check an informative error is raised if a repeat number to be written
+        to the workbook is missing or not an integer, as GEL's schema requires
+        an integer numberOfCopies for each allele.
+        """
+        mock_variant["variantCalls"][0]["numberOfCopies"] = copies
+
+        with pytest.raises(RuntimeError) as error:
+            var_info.get_str_info(mock_variant, "testPB", ["STR1", "STR2"], 0)
+
+        # Error should name the proband and STR, so it can be found in the JSON
+        message = str(error.value)
+        assert "Invalid repeat number for proband testPB" in message
+        assert "SYMB1 STR at 12:6936728-6936773" in message
+        assert f"found {copies}" in message
+
     def test_tier_conversion(self):
         """
         Test Tiers from JSON are converted into tier representation as desired
